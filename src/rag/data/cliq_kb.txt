@@ -1,0 +1,107 @@
+# CliQ - Application Knowledge Base (RAG Dataset)
+
+This document contains the structural and contextual data of the complete "CliQ" social networking application. It is designed to be ingested by a DocumentLoader (e.g., LangChain's `TextLoader` or `MarkdownLoader`), chunked, and embedded into a Vector Database to power a Retrieval-Augmented Generation (RAG) AI Chatbot.
+
+---
+
+## 1. Application Overview
+**Name:** CliQ
+**Type:** Social Networking Platform
+**Description:** A modern social media application featuring user profiles, a dynamic post feed, real-time messaging, and an advanced "Connections" system that uses a Tinder-like swipe interface (Like, View Intel, Ignore) to match professionals. It features a dark-themed, glassmorphism UI with elite/luxury aesthetic.
+
+**Core Tech Stack:**
+*   **Frontend:** React 18, Vite, TailwindCSS v3, Framer Motion (for animations), React Router v6, Socket.io-client.
+*   **Backend:** Express 5.0, MongoDB (Atlas), Prisma ORM, Redis (for pub/sub or queuing), Socket.io (for real-time chat), Cloudinary (for image/file uploads).
+*   **AI Service Layer:** Python, FastAPI, LangGraph, LangChain-Groq, Llama-3.3-70b-versatile (via Groq).
+
+---
+
+## 2. Database Schema (Prisma Models)
+
+The following represents the `schema.prisma` mapping to MongoDB.
+
+### `Users`
+*   `id` (ObjectID, PK)
+*   `firstname`, `lastname`, `email` (Unique)
+*   `age`, `password`, `imageUrl`, `expertise` (JSON)
+*   Relations: Has many `Post`, `Comment`, `Like`, `Report`, `ConnectionsRequest` (sent/received), `Conversation`, `Message`.
+
+### `ConnectionsRequest`
+*   `id` (ObjectID, PK)
+*   `fromUserId`, `toUserId` (Foreign Keys to Users)
+*   `status` (Enum: `ignored`, `interested`, `rejected`, `accepted`)
+*   *Note: Used by the swipe-matching UI (`GetConnections.jsx`).*
+
+### `Post`
+*   `id` (ObjectID, PK)
+*   `content` (String), `image` (String - Cloudinary URL)
+*   `userId` (Foreign Key)
+*   Relations: Has many `Comment`, `Like`, `Report`.
+
+### `Comment` & `Like`
+*   **Comment:** `id`, `comment`, `userId`, `postId`.
+*   **Like:** `id`, `isLiked` (Boolean), `userId`, `postId`. (Unique constraint on userId + postId).
+
+### `Conversation` & `Message` (Chat System)
+*   **Conversation:** `id`, `isGroup` (Boolean), `name`, `image`, `participantIds` (Array of ObjectIDs).
+*   **Message:** `id`, `text`, `image`, `file`, `originalName`, `isDelete`, `deletedById` (Array).
+*   **MessageStatus:** Enum (`sent`, `delivered`, `seen`).
+*   Relations: Self-referential relation for threads/replies (`parentMessageId`).
+
+### `Report`
+*   `id`, `reason`, `userId`, `postId` (optional), `commentId` (optional).
+
+---
+
+## 3. Backend Architecture & API Capabilities
+
+The backend is split into multiple controllers managing specific domains:
+
+*   **Auth Controller (`/auth`)**: Handles user registration, login (JWT), logout.
+*   **Post Controller (`/post`)**:
+    *   Create, Delete, Update text/image posts.
+    *   `getPostFeed` and `getRandomPostFeed` (for discovery).
+    *   `createLike`, `addComment`, `deleteComment`.
+    *   `reportPost`, `reportComment`.
+*   **Search Controller (`/search`)**:
+    *   `searchUserByName` (insensitive string match).
+    *   `getSuggestedUsers` (random users not currently connected).
+    *   `getUserById`, `getHoverCardData`.
+*   **User/Connection Controller (`/user`, `/connection`)**:
+    *   `sendRequest` (interested / ignored).
+    *   `reviewRequest` (accept / reject).
+    *   `getConnectionStatus`, `getFeed`, `getConnections`.
+*   **Chat Controller (`/chat`)**:
+    *   `getConversations` (Fetches users' active chat list and accepted connections without chats yet).
+    *   `getChatHistory` (Fetches thread by user ID).
+    *   `updateMessage`, `deleteMessage`, `deleteMessagesBulk`.
+    *   `uploadFile` (Sends attachment to Cloudinary under folder `chat/images` or `chat/files`).
+
+---
+
+## 4. Frontend Architecture & Routing
+
+**Global Structure:**
+*   `/src/App.jsx` handles global routing and context providers (`UserContext`, `FeedProvider`).
+*   `/src/Layout.jsx` contains the `Sidebar`, `MobileNavbar`, `MobileTopBar`.
+*   `/src/components/Chatbot/Chatbot.jsx` is the new Floating AI Dashboard extension, injected at the root layer (`App.jsx`).
+
+**Key Views/Routes:**
+*   **Home (`/home`):** Shows the randomized post feed globally. Features `HomeSidebar`.
+*   **Profile (`/profile`):** User's personal dashboard to view their posts and edit profile information/expertise.
+*   **Public Profile (`/user/:userId`):** View other users.
+*   **Chat (`/messages` & `/messages/:targetuserId`):** Real-time inbox using Socket.io.
+*   **Find Connections (`/find`):**
+    *   `/find/getconnection`: The "Tinder-style" match interface showing one user card at a time with swipe physics (Framer Motion).
+    *   `/find/findpeople`: Directory of suggested people.
+*   **Create Post (`/create/post`):** Form with Cloudinary image upload handling.
+
+---
+
+## 5. Potential RAG Chatbot Queries & Actions
+
+With this data embedded, the RAG agent can answer queries like:
+1.  *"How does the connection system work?"* -> (Agent sees ConnectionsRequest status enum and GetConnections swipe interface).
+2.  *"Where are images stored?"* -> (Agent sees Cloudinary integration in chat and post controllers).
+3.  *"What is the tech stack?"* -> (Agent lists React, Express, Prisma, Mongo, Redis).
+4.  *"Can users reply to specific messages in a chat?"* -> (Agent confirms yes, based on `parentMessageId` self-relation in the `Message` model).
