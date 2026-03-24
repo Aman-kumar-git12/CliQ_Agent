@@ -7,7 +7,7 @@ from dotenv import load_dotenv
 load_dotenv()
 
 def load_vectorstore():
-    # Use fastembed (very lightweight, no torch) to stay under 512MB RAM
+    # Use fastembed (CPU-optimized, ~30MB RAM overhead) instead of local transformers (~350MB+ RAM)
     embeddings = FastEmbedEmbeddings(model_name="BAAI/bge-small-en-v1.5")
 
     client = MongoClient(os.getenv("DATABASE_URL"))
