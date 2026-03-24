@@ -9,4 +9,5 @@ langchain-core
 langchain-text-splitters
 langchain-mongodb
 pymongo
+fastembed
 python-dotenv

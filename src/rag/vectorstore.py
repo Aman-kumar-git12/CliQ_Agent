@@ -1,4 +1,4 @@
-from langchain_community.embeddings import HuggingFaceInferenceAPIEmbeddings
+from langchain_community.embeddings.fastembed import FastEmbedEmbeddings
 from langchain_mongodb import MongoDBAtlasVectorSearch
 from pymongo import MongoClient
 import os
@@ -7,11 +7,8 @@ from dotenv import load_dotenv
 load_dotenv()
 
 def load_vectorstore():
-    # Use Inference API instead of local processing to stay under 512MB RAM
-    embeddings = HuggingFaceInferenceAPIEmbeddings(
-        api_key=os.getenv("HUGGINGFACE_API_KEY"), 
-        model_name="sentence-transformers/all-MiniLM-L6-v2"
-    )
+    # Use fastembed (very lightweight, no torch) to stay under 512MB RAM
+    embeddings = FastEmbedEmbeddings(model_name="BAAI/bge-small-en-v1.5")
 
     client = MongoClient(os.getenv("DATABASE_URL"))
     collection = client["website_db"]["cliq_vectors"]
