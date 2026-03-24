@@ -1,5 +1,12 @@
+import os
+import sys
 from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
+
+# Add the current directory to sys.path to allow imports from subdirectories
+# when running from the project root.
+sys.path.append(os.path.dirname(os.path.abspath(__file__)))
+
 from routes.chat import router as chat_router
 
 app = FastAPI()
