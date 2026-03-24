@@ -4,11 +4,9 @@ pydantic
 langchain
 langchain-community
 langchain-groq
-langchain-huggingface
 langchain-classic
 langchain-core
 langchain-text-splitters
 langchain-mongodb
 pymongo
-sentence-transformers
 python-dotenv

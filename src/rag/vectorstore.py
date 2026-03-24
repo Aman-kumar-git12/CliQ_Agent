@@ -1,4 +1,4 @@
-from langchain_huggingface import HuggingFaceEmbeddings
+from langchain_community.embeddings import HuggingFaceInferenceAPIEmbeddings
 from langchain_mongodb import MongoDBAtlasVectorSearch
 from pymongo import MongoClient
 import os
@@ -7,7 +7,9 @@ from dotenv import load_dotenv
 load_dotenv()
 
 def load_vectorstore():
-    embeddings = HuggingFaceEmbeddings(
+    # Use Inference API instead of local processing to stay under 512MB RAM
+    embeddings = HuggingFaceInferenceAPIEmbeddings(
+        api_key=os.getenv("HUGGINGFACE_API_KEY"), 
         model_name="sentence-transformers/all-MiniLM-L6-v2"
     )
 
