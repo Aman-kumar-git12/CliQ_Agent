@@ -12,9 +12,12 @@ from routes.chat import router as chat_router
 app = FastAPI()
 
 # Allow requests from the Vite frontend
+frontend_url = os.getenv("FRONTEND_URL", "*")
+origins = [frontend_url] if frontend_url != "*" else ["*"]
+
 app.add_middleware(
     CORSMiddleware,
-    allow_origins=["*"],  # For dev, we'll allow all. Or specifically ["http://localhost:5173"]
+    allow_origins=origins,
     allow_credentials=True,
     allow_methods=["*"],
     allow_headers=["*"],
