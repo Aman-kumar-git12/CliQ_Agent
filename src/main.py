@@ -8,6 +8,7 @@ from contextlib import asynccontextmanager
 sys.path.append(os.path.dirname(os.path.abspath(__file__)))
 
 from routes.chat import router as chat_router, get_agent
+from routes.expertise import router as expertise_router
 
 @asynccontextmanager
 async def lifespan(app: FastAPI):
@@ -32,6 +33,7 @@ app.add_middleware(
 )
 
 app.include_router(chat_router, prefix="/api")
+app.include_router(expertise_router, prefix="/api/expertise")
 
 @app.get("/")
 def read_root():
