@@ -16,7 +16,7 @@ def load_vectorstore():
     vectorstore = MongoDBAtlasVectorSearch(
         collection=collection,
         embedding=embeddings,
-        index_name="default"  # This is the name of the Atlas Search Index we'll configure
+        index_name="default"  # Name of the Atlas Search Index
     )
 
     return vectorstore

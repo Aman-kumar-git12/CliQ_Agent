@@ -67,15 +67,24 @@ async def chat_stream(request: ChatRequest):
     conversational_rag_chain = get_conversational_rag_chain()
 
     async def generate():
-        async for event in conversational_rag_chain.astream_events(
-            {"input": request.message},
-            config={"configurable": {"session_id": request.sessionId}},
-            version="v2",
-        ):
-            kind = event["event"]
-            if kind == "on_chat_model_stream":
-                content = event["data"]["chunk"].content
-                if content:
-                    yield content
+        print(f"Starting stream for session: {request.sessionId}")
+        try:
+            async for event in conversational_rag_chain.astream_events(
+                {"input": request.message},
+                config={"configurable": {"session_id": request.sessionId}},
+                version="v2",
+            ):
+                kind = event["event"]
+                # Filter specifically for the final answer from the model
+                # In create_retrieval_chain, the final model call is typically what we want.
+                # To be safe, we check if the event is from a chat model and if it's not the rephrasing step.
+                if kind == "on_chat_model_stream":
+                    content = event["data"]["chunk"].content
+                    if content:
+                        yield content
+        except Exception as e:
+            print(f"Error in stream generation: {e}")
+            yield f"Error: {str(e)}"
+        print(f"Finished stream for session: {request.sessionId}")
 
     return StreamingResponse(generate(), media_type="text/plain")

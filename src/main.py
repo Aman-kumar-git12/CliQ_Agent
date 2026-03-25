@@ -7,13 +7,22 @@ from fastapi.middleware.cors import CORSMiddleware
 # when running from the project root.
 sys.path.append(os.path.dirname(os.path.abspath(__file__)))
 
-from routes.chat import router as chat_router
+from contextlib import asynccontextmanager
+from routes.chat import router as chat_router, get_conversational_rag_chain
 
-app = FastAPI()
+@asynccontextmanager
+async def lifespan(app: FastAPI):
+    # Pre-load the RAG chain on startup (downloads/loads embeddings and vectorstore)
+    print("Initializing AI RAG chain...")
+    get_conversational_rag_chain()
+    print("AI RAG chain ready.")
+    yield
 
 # Allow requests from the Vite frontend
 frontend_url = os.getenv("FRONTEND_URL", "*")
 origins = [frontend_url] if frontend_url != "*" else ["*"]
+
+app = FastAPI(lifespan=lifespan)
 
 app.add_middleware(
     CORSMiddleware,
