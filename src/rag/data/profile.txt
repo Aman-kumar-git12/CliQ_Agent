@@ -1,0 +1,37 @@
+# Feature: Profile
+
+## Overview
+The Profile page shows the logged-in user's account information, posts, connections, groups, and expertise.
+
+## Main sections
+- Posts
+- Connections
+- Groups
+- Expertise
+
+## What users can do
+- View their profile details and counts.
+- Edit basic profile fields such as first name, last name, email, age, and password.
+- Upload or replace the profile image.
+- View their posts.
+- View accepted connections.
+- View groups they belong to.
+- Edit expertise information.
+
+## Expertise data stored by the app
+- name
+- description
+- experience
+- skills
+- projects
+- achievements
+- interests
+- aboutYou
+- details.email
+- details.address
+- format
+
+## Limits
+- There is no username editing flow in the backend.
+- The profile page does not implement account switching.
+- The code does not show a dedicated bio field outside the expertise object.

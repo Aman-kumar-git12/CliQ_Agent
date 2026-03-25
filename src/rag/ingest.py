@@ -1,40 +1,33 @@
-from langchain_text_splitters import RecursiveCharacterTextSplitter
-from langchain_community.embeddings.fastembed import FastEmbedEmbeddings
-from langchain_mongodb import MongoDBAtlasVectorSearch
-from pymongo import MongoClient
 import os
+import sys
 from dotenv import load_dotenv
-from loader import load_documents
 
-# Load environment variables (makes sure standalone python script reads .env correctly)
+# Add the src directory to sys.path to allow imports from subdirectories
+sys.path.append(os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
+
+from rag.loader import CliQDocumentLoader
+from rag.vectorstore import CliQVectorStore
+
+# Load environment variables
 load_dotenv(dotenv_path=os.path.join(os.path.dirname(__file__), "../../.env"))
-load_dotenv() # Fallback
 
 def build_vectorstore():
-    documents = load_documents()
+    # Instantiate OOP components
+    loader = CliQDocumentLoader()
+    documents = loader.load_documents()
 
-    splitter = RecursiveCharacterTextSplitter(
-        chunk_size=700,
-        chunk_overlap=120
-    )
-
-    split_docs = splitter.split_documents(documents)
-
-    embeddings = FastEmbedEmbeddings(model_name="BAAI/bge-small-en-v1.5")
+    if not documents:
+        print("No documents found to ingest.")
+        return
 
     print("Connecting to MongoDB to insert Vectors...")
-    client = MongoClient(os.getenv("DATABASE_URL"))
-    collection = client["website_db"]["cliq_vectors"]
-
+    vectorstore = CliQVectorStore()
+    
     # Clear old vectors before re-ingesting
-    collection.delete_many({})
+    vectorstore.clear_collection()
 
-    vectorstore = MongoDBAtlasVectorSearch.from_documents(
-        documents=split_docs,
-        embedding=embeddings,
-        collection=collection,
-        index_name="default"
-    )
+    # Ingest new documents
+    vectorstore.ingest_documents(documents)
 
     print("MongoDB Atlas Vector Search ingestion complete!")
 

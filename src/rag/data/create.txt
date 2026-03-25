@@ -1,0 +1,30 @@
+# Feature: Create Post
+
+## Overview
+Create Post lets a logged-in user publish a post with required text content and an optional image.
+
+## How it works
+1. Open the Create Post page.
+2. Enter post text.
+3. Optionally upload one image.
+4. Confirm the action.
+5. The post is saved and the user is redirected to their profile.
+
+## Supported media
+- Image upload only in the current create-post flow.
+- The UI checks for a maximum image size of 10 MB.
+
+## Validation rules
+- Text content is required by the frontend flow.
+- Backend validation allows content or image, but if content is provided it must be 50 characters or fewer.
+
+## Visibility and management
+- Posts are public in the app flow.
+- Users can later edit post text.
+- Users can delete their own posts.
+- Other users can like, comment on, and report posts.
+
+## Limits
+- The current create-post page does not support video upload.
+- There is no draft system.
+- The page requires an authenticated user.

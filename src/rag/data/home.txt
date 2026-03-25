@@ -1,0 +1,26 @@
+# Feature: Home
+
+## Overview
+The Home page shows a random public post feed and a sidebar with suggested users.
+
+## What users can do
+- Scroll through posts loaded from the random feed endpoint.
+- See post content, images, like counts, comment counts, and basic author details.
+- Like posts and open comments from each post card.
+- Open user profiles from feed content.
+- Use the right sidebar to view suggested users.
+- Refresh suggested users from the sidebar.
+- Open the built-in CliQ AI chat assistant from Home.
+
+## Feed behavior
+- The feed is not based on followed connections.
+- The backend returns random posts from other users and excludes the logged-in user's own posts.
+- Infinite scrolling loads more random posts while avoiding duplicates already shown in the current session.
+
+## Suggested content
+- The sidebar shows suggested users from the backend suggestion endpoint.
+- The AI assistant can also help by suggesting users and posts when asked.
+
+## Limits
+- Home does not provide multi-account switching.
+- The feed is not described by the code as a real-time synchronized stream.

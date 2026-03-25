@@ -1,0 +1,27 @@
+# Feature: Requests
+
+## Overview
+Requests shows incoming connection requests for the logged-in user.
+
+## What users can do
+- View pending incoming requests.
+- Open the sender's public profile.
+- Use the hover card for quick profile details.
+- Accept a request.
+- Reject a request.
+
+## Request behavior
+- Incoming requests are loaded from requests where:
+  - status is interested
+  - toUserId is the logged-in user
+- Accepting a request changes its status to accepted.
+- Rejecting a request changes its status to rejected.
+- Sent requests can also be cancelled from other app flows.
+- If an earlier request was ignored, the sender can send it again.
+
+## After acceptance
+- Accepted users can appear in the messaging flow and start chats.
+
+## Limits
+- The requests page is for incoming requests only.
+- Rejected requests are not shown as an archive in this page.

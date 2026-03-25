@@ -1,0 +1,27 @@
+# Feature: CliQ Details
+
+## Overview
+CliQ is a web app that combines:
+- user profiles
+- public posts
+- connection requests
+- one-to-one messaging
+- an AI help chat
+
+## Main product areas
+- Home feed with random posts
+- Suggested users in discovery surfaces
+- Public and private profile views
+- Connection requests and accepted connections
+- Direct messaging between connected users
+- AI chat assistant for platform help
+
+## What the AI assistant is for
+- Explain how the platform works
+- Help users navigate features
+- Answer questions using the platform knowledge base
+- Suggest users and posts when asked
+
+## Important limits
+- The AI assistant is not controlling the website UI.
+- The platform does not currently implement all future-looking ideas such as advanced AI drafting across the whole product unless explicitly added elsewhere.

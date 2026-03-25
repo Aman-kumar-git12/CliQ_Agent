@@ -1,0 +1,32 @@
+# Feature: Messages
+
+## Overview
+Messages is the direct chat system between connected users.
+
+## How users start a chat
+- Open the Messages area to see conversation items.
+- Existing conversations are shown first.
+- Accepted connections without a chat yet appear with a "Start a new chat" state.
+- Opening a conversation goes to the message screen for that target user.
+
+## What users can send
+- Text messages
+- Images
+- Files
+- Audio files handled through the upload flow
+- Replies to earlier messages
+
+## Message actions
+- Edit your own message text
+- Delete for yourself
+- Delete for everyone if you are the sender
+- Bulk delete selected messages
+
+## Real-time behavior
+- Messages are delivered through Socket.IO rooms for one-to-one chats.
+- Conversation lists show the latest message and move active chats upward.
+- Online status is tracked through Redis and socket events.
+
+## Limits
+- The inbox search filters conversation names, not message contents.
+- Group messaging creation flow is not exposed here, even though group records exist in the schema.

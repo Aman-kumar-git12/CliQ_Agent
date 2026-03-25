@@ -1,19 +1,17 @@
 from langchain_classic.chains.combine_documents import create_stuff_documents_chain
-from langchain_classic.chains.retrieval import create_retrieval_chain
-from langchain_classic.chains.history_aware_retriever import create_history_aware_retriever
 from langchain_core.prompts import ChatPromptTemplate, MessagesPlaceholder
+from langchain_core.runnables import RunnableLambda, RunnablePassthrough
+from langchain_core.output_parsers import StrOutputParser
 
 from core.llm import llm
-from rag.prompt import RAG_PROMPT
+from rag.prompt import RAG_PROMPT, ROUTER_PROMPT
 from rag.vectorstore import load_vectorstore
-
 
 
 def get_rag_chain():
     vectorstore = load_vectorstore()
-    retriever = vectorstore.as_retriever(search_kwargs={"k": 3})
 
-    # History-aware prompt to rephrase follow-up questions standalone
+    # 1. Contextualize Question (History-aware)
     contextualize_q_system_prompt = (
         "Given a chat history and the latest user question "
         "which might reference context in the chat history, "
@@ -28,13 +26,52 @@ def get_rag_chain():
             ("human", "{input}"),
         ]
     )
+    
+    # Create the standalone question generator
+    contextualize_chain = contextualize_q_prompt | llm | StrOutputParser()
 
-    history_aware_retriever = create_history_aware_retriever(
-        llm, retriever, contextualize_q_prompt
-    )
+    # 2. Router: Identify the target file
+    router_chain = ROUTER_PROMPT | llm | StrOutputParser()
+
+    # 3. Dynamic Filtering Retriever Logic
+    def route_and_retrieve(info):
+        standalone_question = info["standalone_question"]
+        chat_history = info["chat_history"]
+        
+        # Determine the file using the router
+        target_file = router_chain.invoke({"input": standalone_question, "chat_history": chat_history})
+        target_file = target_file.strip().lower()
+        
+        # Extract filename from potential prose (just in case LLM is wordy)
+        if ".txt" not in target_file:
+            # Fallback or simple search if LLM fails to provide just the filename
+            target_file = "cliq_kb.txt"
+        
+        print(f"Routing Decision: target_file='{target_file}' for query='{standalone_question}'")
+        
+        # Apply pre-filter for MongoDB Atlas Vector Search
+        search_kwargs = {"k": 3}
+        if ".txt" in target_file:
+            search_kwargs["pre_filter"] = {"source": {"$eq": target_file}}
+            
+        docs = vectorstore.similarity_search(standalone_question, **search_kwargs)
+        return docs
 
     # Document chain for answering
     document_chain = create_stuff_documents_chain(llm, RAG_PROMPT)
-    retrieval_chain = create_retrieval_chain(history_aware_retriever, document_chain)
+    
+    # Construct the full intelligent chain
+    # It MUST return a dictionary with "answer" and "context" keys to match chat.py usage
+    full_chain = (
+        RunnablePassthrough.assign(
+            standalone_question=contextualize_chain
+        )
+        | RunnablePassthrough.assign(
+            context=RunnableLambda(route_and_retrieve)
+        )
+        | RunnablePassthrough.assign(
+            answer=document_chain
+        )
+    )
 
-    return retrieval_chain
+    return full_chain

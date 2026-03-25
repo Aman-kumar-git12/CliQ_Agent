@@ -1,0 +1,33 @@
+# Feature: Find
+
+## Overview
+The Find area has two parts:
+- Find People
+- Get Connections
+
+## Find People
+- Users can search by first name or last name.
+- Search is case-insensitive.
+- Users can switch between list view and grid view.
+- Each user card can open the public profile.
+- Users can send a connection request from the card.
+- Hover cards show quick profile information.
+- Suggested users are loaded from the backend and exclude the logged-in user and users already involved in connection records with them.
+
+## Get Connections
+- This page shows one random candidate at a time.
+- Users can swipe or press actions to mark a candidate as:
+  - interested
+  - ignored
+- The page fetches another candidate after each action.
+- Users can open the candidate's expertise details from the card.
+
+## Connection states used in the app
+- none
+- interested
+- ignored
+- accepted
+
+## Limits
+- Suggestions are not AI-matched by skills in the current backend logic.
+- Search is name-based, not semantic search.
