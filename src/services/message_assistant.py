@@ -77,6 +77,21 @@ def _normalized_user_text(text: str = "") -> str:
     return " ".join(str(text or "").strip().lower().split())
 
 
+def _build_assistant_history_section(assistant_history: list[dict[str, Any]] | None = None) -> str:
+    turns = assistant_history or []
+    if not turns:
+        return "No prior Ask AI follow-up context."
+
+    lines = []
+    for turn in turns[-12:]:
+        role = "User" if turn.get("role") == "user" else "Assistant"
+        text = str(turn.get("text") or "").strip()
+        if text:
+            lines.append(f"{role}: {text}")
+
+    return "\n".join(lines) if lines else "No prior Ask AI follow-up context."
+
+
 def _is_greeting_prompt(question: str = "") -> bool:
     normalized = _normalized_user_text(question)
     if not normalized:
@@ -851,7 +866,8 @@ def generate_message_assistant_response(
         "Rank replies by realism, not positivity. "
         "The best reply should sound like what a real person would actually send next in this exact conversation. "
         "Avoid filler-first replies like 'That's great', 'Sounds good', 'Nice', or 'Awesome' unless they are expanded with specific context. "
-        "Emoji replies should usually be short text-plus-emoji messages, not standalone emoji, unless a standalone emoji is clearly the most natural response. "
+        "Emoji replies should be standalone emoji-only replies when that would feel natural in the conversation. "
+        "If emoji-only would feel awkward or unclear, then use short text-plus-emoji messages instead. "
         "Return valid JSON only with this exact shape: "
         "{"
         "\"top_reply\": string, "
@@ -892,7 +908,7 @@ def generate_message_assistant_response(
         "Tasks:\n"
         "1. Suggest the single best next reply.\n"
         "2. Suggest several alternate replies.\n"
-        "3. Provide emoji-friendly replies, preferably as short text-plus-emoji messages.\n"
+        "3. Provide emoji-friendly replies. Use emoji-only replies when they naturally fit this exact chat, otherwise use short text-plus-emoji messages.\n"
         "4. Rewrite the user's draft in cleaner ways.\n"
         "5. Provide other ways to say the same thing.\n"
         "6. Briefly summarize the older context if it matters.\n"
@@ -963,7 +979,8 @@ def generate_general_reply_suggestions(
         "Do not produce dry or generic lines. "
         "Rank replies by realism, not positivity. "
         "Avoid filler-first replies like 'That's great', 'Sounds good', 'Nice', or 'Awesome' unless they are expanded with specific context. "
-        "Emoji replies should usually be short text-plus-emoji messages, not standalone emoji. "
+        "Emoji replies should be standalone emoji-only replies when that feels natural for the situation. "
+        "If emoji-only would feel weak or confusing, then use short text-plus-emoji messages instead. "
         "Return valid JSON only with this exact shape: "
         "{"
         "\"top_reply\": string, "
@@ -1034,6 +1051,7 @@ def generate_general_reply_suggestions(
 
 def answer_about_conversation(
     conversation: list[dict[str, Any]] | None = None,
+    assistant_history: list[dict[str, Any]] | None = None,
     question: str = "",
     other_name: str = "the other person",
     older_context: str = "",
@@ -1057,6 +1075,7 @@ def answer_about_conversation(
         return answer_general_message_help(question=question, tone=tone)
 
     conversation_text, older_text = _build_context_sections(conversation, older_context)
+    assistant_history_text = _build_assistant_history_section(assistant_history)
 
     system_prompt = (
         "You are a messaging assistant inside a private chat app. "
@@ -1072,9 +1091,11 @@ def answer_about_conversation(
     user_prompt = (
         f"Older conversation summary or snippets:\n{older_text}\n\n"
         f"Conversation with {other_name}:\n{conversation_text}\n\n"
+        f"Recent Ask AI follow-up context:\n{assistant_history_text}\n\n"
         f"User question: {question.strip() or 'Help me with this conversation.'}\n\n"
         "Answer specifically from the chat. If the answer is unclear, say that clearly. "
         "Never mention JSON, formatting, schemas, or internal system limitations to the user. "
+        "Use the Ask AI follow-up context only to preserve continuity with the user's earlier assistant questions, but ground the answer in the real chat messages. "
         "If the user asks for the chat or conversation itself, provide a clean transcript-style recap or concise summary from the messages. "
         f"Keep the answer tone {tone}. Also suggest up to 3 helpful next actions."
     )
@@ -1163,6 +1184,7 @@ def answer_general_message_help(
 
 async def stream_answer_about_conversation(
     conversation: list[dict[str, Any]] | None = None,
+    assistant_history: list[dict[str, Any]] | None = None,
     question: str = "",
     other_name: str = "the other person",
     older_context: str = "",
@@ -1192,6 +1214,7 @@ async def stream_answer_about_conversation(
         return
 
     conversation_text, older_text = _build_context_sections(conversation, older_context)
+    assistant_history_text = _build_assistant_history_section(assistant_history)
     system_prompt = (
         "You are a messaging assistant inside a private chat app. "
         "Answer only using the provided conversation context. "
@@ -1201,8 +1224,10 @@ async def stream_answer_about_conversation(
     user_prompt = (
         f"Older conversation summary or snippets:\n{older_text}\n\n"
         f"Conversation with {other_name}:\n{conversation_text}\n\n"
+        f"Recent Ask AI follow-up context:\n{assistant_history_text}\n\n"
         f"User question: {question.strip() or 'Help me with this conversation.'}\n\n"
-        f"Keep the answer tone {tone}. If context is unclear, say that clearly."
+        f"Keep the answer tone {tone}. If context is unclear, say that clearly. "
+        "Use the Ask AI follow-up context only to preserve continuity, but ground the answer in the real chat messages."
     )
 
     try:

@@ -18,8 +18,14 @@ class MessageAssistantTurn(BaseModel):
     timestamp: str | None = None
 
 
+class AssistantHistoryTurn(BaseModel):
+    role: str
+    text: str | None = ""
+
+
 class MessageAssistantRequest(BaseModel):
     conversation: list[MessageAssistantTurn] = []
+    assistant_history: list[AssistantHistoryTurn] = []
     draft: str = ""
     mode: str = "replies"
     question: str = ""
@@ -35,6 +41,7 @@ def message_assistant(request: MessageAssistantRequest):
     if request.mode == "ask":
         payload = answer_about_conversation(
             conversation=conversation,
+            assistant_history=[turn.model_dump() for turn in request.assistant_history],
             question=request.question,
             other_name=request.other_name,
             older_context=request.older_context,
@@ -57,6 +64,7 @@ async def message_assistant_stream(request: MessageAssistantRequest):
     async def generate():
         async for chunk in stream_answer_about_conversation(
             conversation=[turn.model_dump() for turn in request.conversation],
+            assistant_history=[turn.model_dump() for turn in request.assistant_history],
             question=request.question,
             other_name=request.other_name,
             older_context=request.older_context,
