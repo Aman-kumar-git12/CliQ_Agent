@@ -107,8 +107,13 @@ class CliQRAGService:
                 "State the path clearly, such as `Home > Profile > Settings`, "
                 "and then add a short explanation in a natural chat tone."
             ),
+            "general_assistance": (
+                "You are helping the user with a general professional writing or language task. "
+                "If they want correction, provide it clearly. If they want translation, do so accurately. "
+                "Use Markdown to make the result look professional (e.g., use blockquotes or bold text for changes)."
+            ),
             "out_of_scope": (
-                "Reply in 1 short polite sentence that you can only help with CliQ platform features, usage, users, posts, messages, requests, and profile-related questions."
+                "Reply in 1 short polite sentence that you can only help with CliQ platform features, professional writing, and language-related questions."
             ),
         }
 
@@ -119,7 +124,7 @@ class CliQRAGService:
 
         print(f"Flow: Intent='{intent}', Section='{section}'")
 
-        if intent in {"greeting", "out_of_scope"}:
+        if intent in {"greeting", "out_of_scope", "general_assistance"}:
             return {
                 "context": [],
                 "intent_instructions": intent_instructions,

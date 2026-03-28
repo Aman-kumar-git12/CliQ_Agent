@@ -9,7 +9,7 @@ Do NOT answer the question. Do NOT include any preamble or conversational text.
 
 Format:
 {{
-  "intent": "greeting" | "steps" | "information" | "navigation" | "out_of_scope",
+  "intent": "greeting" | "steps" | "information" | "navigation" | "general_assistance" | "out_of_scope",
   "section": "home" | "find" | "create" | "messages" | "requests" | "profile" | "cliq_details"
 }}
 
@@ -22,7 +22,8 @@ Rules:
 - For step-by-step requests like "how do I", "steps", "guide", set intent = "steps"
 - For explanatory requests like "what is", "tell me about", "explain", set intent = "information"
 - For path-finding requests like "where is", "how can I find", set intent = "navigation"
-- If the user asks about topics not related to the CliQ platform or its features, set intent = "out_of_scope" and section = "cliq_details"
+- For general writing help, grammar correction, word conversion, translation, or simple creative tasks, set intent = "general_assistance" and section = "cliq_details"
+- If the user asks about topics not related to the CliQ platform AND NOT general assistance (like deep medical advice, complex coding, unrelated products), set intent = "out_of_scope" and section = "cliq_details"
 - Use the best matching section for relevant CliQ questions
 
 Intent guide:
@@ -30,7 +31,8 @@ Intent guide:
 - steps → how to, steps, guide
 - information → what is, explain
 - navigation → where, how to find
-- out_of_scope → general knowledge, coding help, math, politics, unrelated products, unrelated personal advice
+- general_assistance → correct this sentence, translate to spanish, convert to uppercase, write a professional bio
+- out_of_scope → medical advice, deep math, complex software engineering, politics, unrelated physical products
 
 Return JSON only."""
     ),
@@ -52,8 +54,9 @@ Rules:
 - You may use 0 to 2 simple emojis when they fit naturally.
 - If the user repeats a similar question, keep the meaning consistent but vary the wording slightly so the reply does not feel copied.
 - Do not mention internal labels or classification.
-- Do not answer unrelated questions.
-- If the request is unrelated to CliQ, politely refuse and state that you can only help with CliQ features and usage."""
+- Do not answer out-of-scope or harmful questions.
+- If the intent is "general_assistance", follow the user's request precisely (e.g., correct the grammar, translate, etc.).
+- If the request is truly out-of-scope for both CliQ and general assistance, politely refuse and state that you can only help with CliQ features and professional writing/translation assistance."""
     ),
     MessagesPlaceholder(variable_name="chat_history"),
     ("human", "{input}"),
