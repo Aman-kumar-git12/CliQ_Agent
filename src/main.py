@@ -69,6 +69,10 @@ app.include_router(message_assistant_router, prefix="/api/message-ai")
 app.include_router(expertise_router, prefix="/api/expertise")
 app.include_router(matching_router, prefix="/api/match")
 
+@app.get("/api/health")
+def health_check():
+    return {"status": "ok"}
+
 @app.get("/", response_class=HTMLResponse)
 def read_root():
     uptime_seconds = int(time.time() - start_time)
