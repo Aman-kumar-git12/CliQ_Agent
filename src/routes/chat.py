@@ -2,7 +2,7 @@ import os
 from fastapi import APIRouter
 from pydantic import BaseModel
 from fastapi.responses import StreamingResponse
-from core.agent import CliQAgent
+from ..core.agent import CliQAgent
 
 router = APIRouter()
 

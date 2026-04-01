@@ -5,9 +5,9 @@ from langchain_core.output_parsers import StrOutputParser
 from langchain_core.prompts import ChatPromptTemplate, MessagesPlaceholder
 from langchain_classic.chains.combine_documents import create_stuff_documents_chain
 
-from core.llm import classifier_llm, response_llm
-from rag.prompt import DIRECT_RESPONSE_PROMPT, INTENT_PROMPT, RAG_PROMPT
-from rag.vectorstore import CliQVectorStore
+from ..core.llm import classifier_llm, response_llm
+from .prompt import DIRECT_RESPONSE_PROMPT, INTENT_PROMPT, RAG_PROMPT
+from .vectorstore import CliQVectorStore
 
 
 class CliQRAGService:
@@ -58,6 +58,19 @@ class CliQRAGService:
 
         q = standalone_question.lower().strip()
 
+        capability_markers = (
+            "what can you do",
+            "what do you do",
+            "what kind of information",
+            "what types of information",
+            "what information can you",
+            "what info can you",
+            "how can you help",
+            "how do you help",
+            "what can cliq ai do",
+            "what is cliq ai for",
+        )
+
         greetings = {
             "hi",
             "hello",
@@ -68,6 +81,9 @@ class CliQRAGService:
         }
         if q in greetings:
             intent = "greeting"
+            section = "cliq_details"
+        elif any(marker in q for marker in capability_markers):
+            intent = "information"
             section = "cliq_details"
         else:
             res = self.intent_chain.invoke({
@@ -108,12 +124,10 @@ class CliQRAGService:
                 "and then add a short explanation in a natural chat tone."
             ),
             "general_assistance": (
-                "You are helping the user with a general professional writing or language task. "
-                "If they want correction, provide it clearly. If they want translation, do so accurately. "
-                "Use Markdown to make the result look professional (e.g., use blockquotes or bold text for changes)."
+                "Reply in 1 short polite sentence that this assistant is focused on CliQ platform guidance and feature help."
             ),
             "out_of_scope": (
-                "Reply in 1 short polite sentence that you can only help with CliQ platform features, professional writing, and language-related questions."
+                "Reply in 1 short polite sentence that you can only help with CliQ platform features and guidance."
             ),
         }
 

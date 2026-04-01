@@ -4,7 +4,7 @@ from typing import Any
 
 from langchain_core.messages import HumanMessage, SystemMessage
 
-from core.llm import classifier_llm, fallback_response_llm, response_llm
+from ..core.llm import classifier_llm, fallback_response_llm, response_llm
 
 ALLOWED_TONES = {
     "casual",

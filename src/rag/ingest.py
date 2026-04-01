@@ -5,8 +5,8 @@ from dotenv import load_dotenv
 # Add the src directory to sys.path to allow imports from subdirectories
 sys.path.append(os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
 
-from rag.loader import CliQDocumentLoader
-from rag.vectorstore import CliQVectorStore
+from .loader import CliQDocumentLoader
+from .vectorstore import CliQVectorStore
 
 # Load environment variables
 load_dotenv(dotenv_path=os.path.join(os.path.dirname(__file__), "../../.env"))

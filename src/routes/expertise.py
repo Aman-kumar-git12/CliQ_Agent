@@ -2,8 +2,8 @@ import traceback
 
 from fastapi import APIRouter, HTTPException
 
-from models.expertise import ExpertiseGenerateRequest, ExpertiseGenerateResponse
-from services.expertise import expertise_service
+from ..models.expertise import ExpertiseGenerateRequest, ExpertiseGenerateResponse
+from ..services.expertise import expertise_service
 
 router = APIRouter()
 

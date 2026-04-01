@@ -1,7 +1,9 @@
-from rag.vectorstore import CliQVectorStore
-from rag.service import CliQRAGService
+from ..rag.vectorstore import CliQVectorStore
+from ..rag.service import CliQRAGService
+import certifi
 from langchain_core.runnables.history import RunnableWithMessageHistory
 from langchain_mongodb.chat_message_histories import MongoDBChatMessageHistory
+from pymongo import MongoClient
 import os
 
 class CliQAgent:
@@ -27,11 +29,16 @@ class CliQAgent:
 
     def _get_session_history(self, session_id: str):
         """Internal method to fetch session history from MongoDB."""
+        client = MongoClient(
+            os.getenv("DATABASE_URL"),
+            tlsCAFile=certifi.where(),
+        )
         return MongoDBChatMessageHistory(
             session_id=session_id,
-            connection_string=os.getenv("DATABASE_URL"),
+            connection_string=None,
             database_name="website_db",
             collection_name="chat_histories",
+            client=client,
         )
 
     def ask(self, input_text: str, session_id: str):

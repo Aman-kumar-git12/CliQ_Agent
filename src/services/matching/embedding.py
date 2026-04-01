@@ -1,4 +1,5 @@
 import hashlib
+import re
 from typing import Any, Dict, List, Optional
 from threading import Lock
 
@@ -63,8 +64,6 @@ class EmbeddingManager:
 
     def _fallback_text_embedding(self, text: str, dimensions: int = 96) -> List[float]:
         vector = [0.0] * dimensions
-        tokens = tokenize(re_split(r"\s+", text)) if text else [] # Wait, I need re here or from utils
-        import re # Locally for now or use utils
         tokens = tokenize(re.split(r"\s+", text))
         
         if not tokens:

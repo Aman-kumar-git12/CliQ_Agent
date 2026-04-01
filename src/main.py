@@ -1,16 +1,12 @@
 import os
-import sys
 from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
 from contextlib import asynccontextmanager
 
-# Add the current directory to sys.path
-sys.path.append(os.path.dirname(os.path.abspath(__file__)))
-
-from routes.chat import router as chat_router, get_agent
-from routes.message_assistant import router as message_assistant_router
-from routes.expertise import router as expertise_router
-from routes.matching import router as matching_router
+from .routes.chat import router as chat_router, get_agent
+from .routes.message_assistant import router as message_assistant_router
+from .routes.expertise import router as expertise_router
+from .routes.matching import router as matching_router
 
 import time
 import asyncio

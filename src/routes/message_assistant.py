@@ -2,7 +2,7 @@ from fastapi import APIRouter
 from pydantic import BaseModel
 from fastapi.responses import StreamingResponse
 
-from services.message_assistant import (
+from ..services.message_assistant import (
     answer_about_conversation,
     generate_message_assistant_response,
     stream_answer_about_conversation,

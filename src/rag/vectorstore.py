@@ -1,4 +1,5 @@
 import os
+import certifi
 from pymongo import MongoClient
 from langchain_mongodb import MongoDBAtlasVectorSearch
 from langchain_community.embeddings.fastembed import FastEmbedEmbeddings
@@ -13,7 +14,10 @@ class CliQVectorStore:
         self.index_name = "default"
         
         self.embeddings = FastEmbedEmbeddings(model_name="BAAI/bge-small-en-v1.5")
-        self.client = MongoClient(self.connection_string)
+        self.client = MongoClient(
+            self.connection_string,
+            tlsCAFile=certifi.where(),
+        )
         self.collection = self.client[self.database_name][self.collection_name]
         
         # Initialize the vector search instance

@@ -4,8 +4,8 @@ from typing import Any, Dict, List, Optional
 from threading import Lock
 import re
 
-from services.matching.config import DEFAULT_TOP_K, DEFAULT_RETRIEVAL_K, RANKING_CONFIG
-from services.matching.utils import (
+from .config import DEFAULT_TOP_K, DEFAULT_RETRIEVAL_K, RANKING_CONFIG
+from .utils import (
     normalize_text, is_meaningful_text, normalize_terms, merge_unique_terms,
     build_explicit_preference_profile, tokenize, shared_items, cosine_similarity, clamp
 )

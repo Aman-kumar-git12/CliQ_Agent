@@ -5,9 +5,9 @@ from difflib import get_close_matches
 
 from langchain_core.output_parsers import StrOutputParser
 
-from core.llm import response_llm
-from models.expertise import ExpertiseGenerateResponse, ExpertisePayload
-from prompts.expertise import GENERATION_PROMPT
+from ..core.llm import response_llm
+from ..models.expertise import ExpertiseGenerateResponse, ExpertisePayload
+from ..prompts.expertise import GENERATION_PROMPT
 
 logger = logging.getLogger(__name__)
 

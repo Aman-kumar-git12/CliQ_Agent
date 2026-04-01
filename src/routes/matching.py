@@ -2,7 +2,7 @@ from fastapi import APIRouter, HTTPException
 from pydantic import BaseModel
 from typing import Any, Dict, List, Optional
 
-from services.matching import matching_service
+from ..services.matching import matching_service
 
 router = APIRouter()
 
