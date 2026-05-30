@@ -32,11 +32,54 @@ class CliQVectorStore:
     def similarity_search(self, query: str, k: int = 3, pre_filter: dict = None):
         """Performs a similarity search with optional metadata filtering."""
         print(f"Searching for: '{query}' with filter: {pre_filter}")
-        return self.vector_search.similarity_search(
-            query,
-            k=k,
-            pre_filter=pre_filter
-        )
+        
+        try:
+            results = self.vector_search.similarity_search(
+                query,
+                k=k,
+                pre_filter=pre_filter
+            )
+            if results:
+                return results
+        except Exception as e:
+            print(f"Atlas Vector Search failed/missing: {e}")
+
+        # Fallback: Local In-Memory Search (for small collections)
+        print("Using local in-memory fallback search...")
+        try:
+            query_vector = self.embeddings.embed_query(query)
+            
+            # Fetch all documents (limited to 1000 for safety)
+            cursor = self.collection.find(pre_filter or {}).limit(1000)
+            all_docs = list(cursor)
+            
+            if not all_docs:
+                return []
+
+            import numpy as np
+            
+            scored_docs = []
+            for doc in all_docs:
+                if 'embedding' not in doc: continue
+                
+                # Simple dot product for cosine similarity (assuming normalized vectors)
+                sim = np.dot(query_vector, doc['embedding'])
+                scored_docs.append((sim, doc))
+            
+            # Sort by similarity descending
+            scored_docs.sort(key=lambda x: x[0], reverse=True)
+            top_k = scored_docs[:k]
+            
+            from langchain_core.documents import Document
+            return [
+                Document(
+                    page_content=d['text'],
+                    metadata={k: v for k, v in d.items() if k not in ['_id', 'embedding', 'text']}
+                ) for _, d in top_k
+            ]
+        except Exception as e:
+            print(f"Local fallback search failed: {e}")
+            return []
 
     def clear_collection(self):
         """Deletes all documents from the vector collection."""

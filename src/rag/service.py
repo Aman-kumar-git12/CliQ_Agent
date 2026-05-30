@@ -171,7 +171,7 @@ class CliQRAGService:
 
         return (
             RunnablePassthrough.assign(
-                standalone_question=self.contextualize_chain
+                standalone_question=lambda x: self.contextualize_chain.invoke(x) if x.get("chat_history") else x["input"]
             )
             | RunnablePassthrough.assign(
                 classification_info=RunnableLambda(self._get_classification)
