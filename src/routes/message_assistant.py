@@ -33,6 +33,7 @@ class MessageAssistantRequest(BaseModel):
     tone: str = "polite"
     other_name: str = "the other person"
     max_suggestions: int = 5
+    emojiPreference: str | None = "both"
 
 
 @router.post("/respond")
@@ -55,6 +56,7 @@ def message_assistant(request: MessageAssistantRequest):
             older_context=request.older_context,
             tone=request.tone,
             max_suggestions=request.max_suggestions,
+            emoji_preference=request.emojiPreference,
         )
     return payload
 

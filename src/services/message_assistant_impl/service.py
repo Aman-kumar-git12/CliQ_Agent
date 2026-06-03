@@ -24,7 +24,9 @@ from .utils import (
     _is_greeting_prompt,
     _is_transcript_or_summary_prompt,
     _normalize_grouped_replies,
+    _get_emoji_instruction,
     _normalize_tone,
+    _get_tone_instruction,
     _normalized_user_text,
     _reply_generation_error_payload,
     _safety_answer_payload,
@@ -174,6 +176,7 @@ def generate_message_assistant_response(
     older_context: str = "",
     tone: str = "polite",
     max_suggestions: int = 5,
+    emoji_preference: str = "both",
 ) -> dict[str, Any]:
     tone = _normalize_tone(tone)
     if _should_block_messaging_request(draft):
@@ -181,7 +184,7 @@ def generate_message_assistant_response(
 
     reply_mode, routing_source = _classify_reply_mode(conversation, draft, older_context)
     if reply_mode == "general":
-        return generate_general_reply_suggestions(draft=draft, tone=tone, max_suggestions=max_suggestions)
+        return generate_general_reply_suggestions(draft=draft, tone=tone, max_suggestions=max_suggestions, emoji_preference=emoji_preference)
 
     conversation_text, older_text = _build_context_sections(conversation, older_context)
     last_other_message = _get_last_other_person_message(conversation)
@@ -191,7 +194,10 @@ def generate_message_assistant_response(
         "You are a private messaging assistant inside a chat app. "
         "Use only the recent conversation to craft helpful replies for the user. "
         "Your job is to generate natural, human-sounding, ready-to-send replies, not generic advice. "
+        "If there is any real chat context, treat it as the primary source and avoid falling back to generic opener advice. "
         "When the other person asks a simple question, answer it directly first and optionally add a light follow-up. "
+        "If the draft is empty, still generate contextual replies from the conversation instead of inventing a fresh opener. "
+        "Anchor your replies to the last message from the other person whenever one exists. "
         "Avoid robotic, vague, repetitive, or placeholder wording. "
         "Do not explain your reasoning. Do not give advice bullets. Only generate actual messages the user can send. "
         "Make replies feel like modern real chat messages. "
@@ -204,6 +210,8 @@ def generate_message_assistant_response(
         "{"
         "\"top_reply\": string, "
         "\"reply_suggestions\": string[], "
+        "\"emoji_replies_with_emojis\": string[], "
+        "\"emoji_replies_without_emojis\": string[], "
         "\"emoji_replies\": string[], "
         "\"rewrites\": {\"clean\": string, \"short\": string, \"warm\": string, \"confident\": string}, "
         "\"same_message_variants\": string[], "
@@ -213,11 +221,14 @@ def generate_message_assistant_response(
         "\"detected_intent\": string, "
         "\"tone\": string"
         "}. "
-        f"Provide exactly {max_suggestions} items in reply_suggestions when possible, 3 items in emoji_replies, "
-        "and 4 items in same_message_variants. "
+        f"Provide exactly {max_suggestions} items in reply_suggestions when possible, 3 items in emoji_replies_with_emojis, "
+        "3 items in emoji_replies_without_emojis, and 4 items in same_message_variants. "
+        "Keep the with-emojis and without-emojis lists parallel in meaning. "
         "Make the replies specific to the conversation with "
         f"{other_name}. Keep them natural, concise, and ready to send. "
         f"Default tone for replies should be {tone} unless a rewrite field naturally needs a different nuance. "
+        f"{_get_tone_instruction(tone)}\n"
+        f"{_get_emoji_instruction(emoji_preference)}\n"
         "Do not invent actions, plans, bookings, travel arrangements, promises, or commitments unless they are clearly supported by the conversation. "
         "If the conversation only shows interest or casual discussion, keep replies low-assumption. "
         "If context confidence is low, be extra conservative and avoid introducing any commitment, logistics, or emotional intensity that is not clearly present. "
@@ -260,6 +271,8 @@ def generate_message_assistant_response(
         return _reply_generation_error_payload("llm_unavailable", tone)
 
     reply_suggestions = _ensure_list(payload.get("reply_suggestions"), max_suggestions)
+    emoji_replies_with_emojis = _ensure_list(payload.get("emoji_replies_with_emojis"), 3)
+    emoji_replies_without_emojis = _ensure_list(payload.get("emoji_replies_without_emojis"), 3)
     emoji_replies = _ensure_list(payload.get("emoji_replies"), 3)
     variants = _ensure_list(payload.get("same_message_variants"), 4)
     rewrites = payload.get("rewrites") if isinstance(payload.get("rewrites"), dict) else {}
@@ -268,7 +281,9 @@ def generate_message_assistant_response(
     normalized = {
         "top_reply": str(payload.get("top_reply") or draft or "").strip(),
         "reply_suggestions": reply_suggestions,
-        "emoji_replies": emoji_replies,
+        "emoji_replies_with_emojis": emoji_replies_with_emojis,
+        "emoji_replies_without_emojis": emoji_replies_without_emojis,
+        "emoji_replies": emoji_replies or emoji_replies_with_emojis,
         "rewrites": {
             "clean": str(rewrites.get("clean") or draft or "").strip(),
             "short": str(rewrites.get("short") or "").strip(),
@@ -291,6 +306,17 @@ def generate_message_assistant_response(
     if not normalized["reply_suggestions"]:
         return _reply_generation_error_payload("empty_llm_reply", tone)
 
+    if not normalized["emoji_replies_with_emojis"] and normalized["emoji_replies"]:
+        normalized["emoji_replies_with_emojis"] = normalized["emoji_replies"]
+
+    if not normalized["emoji_replies_without_emojis"] and normalized["emoji_replies"]:
+        normalized["emoji_replies_without_emojis"] = normalized["emoji_replies"]
+
+    if emoji_preference == "with" and normalized["emoji_replies_with_emojis"]:
+        normalized["reply_suggestions"] = normalized["emoji_replies_with_emojis"]
+    elif emoji_preference == "without" and normalized["emoji_replies_without_emojis"]:
+        normalized["reply_suggestions"] = normalized["emoji_replies_without_emojis"]
+
     return normalized
 
 
@@ -298,6 +324,7 @@ def generate_general_reply_suggestions(
     draft: str = "",
     tone: str = "polite",
     max_suggestions: int = 5,
+    emoji_preference: str = "both",
 ) -> dict[str, Any]:
     tone = _normalize_tone(tone)
     if _should_block_messaging_request(draft):
@@ -311,12 +338,14 @@ def generate_general_reply_suggestions(
         "Do not produce dry or generic lines. "
         "Rank replies by realism, not positivity. "
         "Avoid filler-first replies like 'That's great', 'Sounds good', 'Nice', or 'Awesome' unless they are expanded with specific context. "
-        "Emoji replies should be standalone emoji-only replies when that feels natural for the situation. "
+        "Generate both emoji-backed replies and emoji-free replies as separate parallel lists. "
         "If emoji-only would feel weak or confusing, then use short text-plus-emoji messages instead. "
         "Return valid JSON only with this exact shape: "
         "{"
         "\"top_reply\": string, "
         "\"reply_suggestions\": string[], "
+        "\"emoji_replies_with_emojis\": string[], "
+        "\"emoji_replies_without_emojis\": string[], "
         "\"emoji_replies\": string[], "
         "\"rewrites\": {\"clean\": string, \"short\": string, \"warm\": string, \"confident\": string}, "
         "\"same_message_variants\": string[], "
@@ -330,7 +359,9 @@ def generate_general_reply_suggestions(
 
     user_prompt = (
         f"User draft or goal: {draft.strip() or '[No draft provided]'}\n\n"
-        f"Preferred tone: {tone}\n\n"
+        f"Preferred tone: {tone}\n"
+        f"{_get_tone_instruction(tone)}\n"
+        f"{_get_emoji_instruction(emoji_preference)}\n\n"
         f"Generate exactly {max_suggestions} strong messaging suggestions for sparse-chat or first-message situations. "
         "Prioritize greetings, openers, light flirty starters, and easy-to-reply-to messages. "
         "Avoid bland lines like only 'hi' or 'hello' unless they are improved. "
@@ -347,6 +378,8 @@ def generate_general_reply_suggestions(
         return _reply_generation_error_payload("llm_unavailable", tone)
 
     reply_suggestions = _ensure_list(payload.get("reply_suggestions"), max_suggestions)
+    emoji_replies_with_emojis = _ensure_list(payload.get("emoji_replies_with_emojis"), 3)
+    emoji_replies_without_emojis = _ensure_list(payload.get("emoji_replies_without_emojis"), 3)
     emoji_replies = _ensure_list(payload.get("emoji_replies"), 3)
     variants = _ensure_list(payload.get("same_message_variants"), 4)
     rewrites = payload.get("rewrites") if isinstance(payload.get("rewrites"), dict) else {}
@@ -355,7 +388,9 @@ def generate_general_reply_suggestions(
     normalized = {
         "top_reply": str(payload.get("top_reply") or draft or "").strip(),
         "reply_suggestions": reply_suggestions,
-        "emoji_replies": emoji_replies,
+        "emoji_replies_with_emojis": emoji_replies_with_emojis,
+        "emoji_replies_without_emojis": emoji_replies_without_emojis,
+        "emoji_replies": emoji_replies or emoji_replies_with_emojis,
         "rewrites": {
             "clean": str(rewrites.get("clean") or draft or "").strip(),
             "short": str(rewrites.get("short") or "").strip(),
@@ -377,6 +412,17 @@ def generate_general_reply_suggestions(
 
     if not normalized["reply_suggestions"]:
         return _reply_generation_error_payload("empty_llm_reply", tone)
+
+    if not normalized["emoji_replies_with_emojis"] and normalized["emoji_replies"]:
+        normalized["emoji_replies_with_emojis"] = normalized["emoji_replies"]
+
+    if not normalized["emoji_replies_without_emojis"] and normalized["emoji_replies"]:
+        normalized["emoji_replies_without_emojis"] = normalized["emoji_replies"]
+
+    if emoji_preference == "with" and normalized["emoji_replies_with_emojis"]:
+        normalized["reply_suggestions"] = normalized["emoji_replies_with_emojis"]
+    elif emoji_preference == "without" and normalized["emoji_replies_without_emojis"]:
+        normalized["reply_suggestions"] = normalized["emoji_replies_without_emojis"]
 
     return normalized
 

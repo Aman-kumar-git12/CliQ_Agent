@@ -27,6 +27,35 @@ def _normalize_tone(tone: str = "polite") -> str:
     return normalized if normalized in ALLOWED_TONES else "polite"
 
 
+def _get_tone_instruction(tone: str) -> str:
+    tone_instructions = {
+        "casual": "Keep it very relaxed and informal. Use everyday language, feeling like a quick text to a peer.",
+        "polite": "Be courteous, respectful, and well-mannered.",
+        "formal": "Use proper grammar, full sentences, and maintain a professional or respectful distance.",
+        "flirty": "Be playful, slightly teasing, and show romantic interest without being overly aggressive or explicit.",
+        "professional": "Keep it strictly business-appropriate, clear, objective, and focused on facts.",
+        "witty": "Use clever humor, puns, or mild sarcasm to be amusing, smart, and quick on your feet.",
+        "direct": "Be straightforward, clear, and to the point. No fluff or beating around the bush.",
+        "friendly": "Be warm, approachable, positive, and pleasant, like talking to a good friend.",
+        "empathetic": "Show deep understanding, warmth, validation, and care for the other person's feelings.",
+        "confident": "Speak with self-assurance, certainty, and decisiveness, without sounding arrogant.",
+    }
+    normalized = _normalize_tone(tone)
+    instruction = tone_instructions.get(normalized, tone_instructions["polite"])
+    return f"Tone instruction for '{normalized}': {instruction}"
+
+
+def _get_emoji_instruction(emoji_preference: str = "both") -> str:
+    normalized = str(emoji_preference or "both").strip().lower()
+    preference_instructions = {
+        "both": "Generate two parallel styles: one set with emojis and one set without emojis.",
+        "with": "Prefer emoji-rich replies and make the emoji version the primary style.",
+        "without": "Prefer emoji-free replies and keep emoji usage minimal or absent.",
+    }
+    instruction = preference_instructions.get(normalized, preference_instructions["both"])
+    return f"Emoji instruction for '{normalized}': {instruction}"
+
+
 def _normalized_user_text(text: str = "") -> str:
     return " ".join(str(text or "").strip().lower().split())
 
@@ -216,6 +245,8 @@ def _safety_reply_payload(tone: str = "polite") -> dict[str, Any]:
         "top_reply": "",
         "reply_suggestions": [],
         "emoji_replies": [],
+        "emoji_replies_with_emojis": [],
+        "emoji_replies_without_emojis": [],
         "rewrites": {
             "clean": "",
             "short": "",
@@ -332,6 +363,8 @@ def _reply_generation_error_payload(reason: str = "llm_unavailable", tone: str =
         "top_reply": "",
         "reply_suggestions": [],
         "emoji_replies": [],
+        "emoji_replies_with_emojis": [],
+        "emoji_replies_without_emojis": [],
         "rewrites": {
             "clean": "",
             "short": "",
@@ -513,6 +546,11 @@ def _should_use_general_reply_mode(
         for turn in turns
         if (turn.get("text") or "").strip()
     ]
+    has_other_person_message = any(
+        (turn.get("role") or "").strip().lower() == "other"
+        and (turn.get("text") or "").strip()
+        for turn in turns
+    )
 
     normalized_draft = (draft or "").strip().lower()
 
@@ -533,8 +571,10 @@ def _should_use_general_reply_mode(
         "introduce myself",
     ]
 
-    if len(meaningful_turns) <= 1:
-        return True
+    # Prefer contextual replies whenever there is any real chat to answer.
+    # General mode should be reserved for true opener/sparse-chat cases.
+    if has_other_person_message:
+        return False
 
     if not meaningful_turns and not normalized_draft:
         return True
@@ -543,6 +583,9 @@ def _should_use_general_reply_mode(
         return True
 
     if normalized_draft in {"hi", "hello", "hey", "hii", "heyy"}:
+        return True
+
+    if len(meaningful_turns) <= 1:
         return True
 
     return False
