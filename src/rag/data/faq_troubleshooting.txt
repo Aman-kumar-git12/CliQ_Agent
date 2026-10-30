@@ -1,0 +1,40 @@
+# Feature: FAQ and troubleshooting
+Route: n/a (all pages)
+
+## Summary
+Quick answers to common problems and to questions about features CliQ does not have yet. For step-by-step help, ask about the specific feature.
+
+## Login and account problems
+- Problem: forgot your password → Fix: on the login page click **Forgot Password?**, enter your email and new password, click **Send OTP**, then enter the 6-digit code.
+- Problem: "Your account has been blocked. Please contact support." → Fix: on the blocked page click **Ask For Unblock**, explain your case and click **Submit Request**. The CliQ team reviews it.
+- Problem: "Please verify your email before logging in." → Fix: enter the 6-digit code from your sign up email. If you lost the code page, sign up again with the same email to get a new code.
+- Problem: no code email → Fix: check your spam folder, then use **Resend code**. A new email verification code can be requested 10 minutes after the previous one.
+- Problem: "Use Google sign-in" → Fix: this account uses Google; click **Sign in with Google**.
+- Problem: you still see the feed after logging out → Fix: refresh the page.
+
+## Posting problems
+- Problem: post too long → Fix: posts can be up to 500 characters.
+- Problem: file too big → Fix: images must be under 10 MB and videos under 50 MB.
+- Problem: can't see your own post on Home → Fix: your posts are on your profile, not in your Home feed.
+- Problem: can't change the photo of a post → Fix: only the text can be edited; delete and repost to change media.
+
+## Connections and chat problems
+- Problem: no more matches on Get Connections → Fix: click **Refresh Matches** and complete your expertise profile.
+- Problem: can't remove a connection → Fix: removing connections is not available yet.
+- Problem: someone isn't in your Messages inbox → Fix: open their profile and click **Chat**.
+- Problem: upload failed in chat → Fix: try a smaller file and check your connection.
+
+## Features not available yet
+- Stories, the Following and Trending feeds, drafts, scheduled or private posts, several images per post, polls.
+- Comment likes and comment editing.
+- Group chats, voice and video calls, read receipts, typing indicators, message search.
+- Removing a connection, a list of sent requests, blocking or reporting a person.
+- Notification settings, email or push notifications.
+- Privacy settings, usernames, two-factor login, dark/light theme switch, account deactivation (deleting is permanent).
+
+## Where to find things
+- Settings: sidebar **Settings**, or the phone menu at the top right.
+- Edit profile details: **Settings** > **Edit Profile**.
+- Edit expertise: **Settings** > **Edit Expertise**.
+- Saved posts: sidebar **Saved**.
+- Delete your account: **Settings** > **Delete Profile**.

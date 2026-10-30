@@ -15,6 +15,8 @@ except ImportError:
 
 from .utils import tokenize
 
+BGE_QUERY_INSTRUCTION = "Represent this sentence for searching relevant passages: "
+
 class EmbeddingManager:
     def __init__(self) -> None:
         self._embedder = self._create_embedder()
@@ -61,6 +63,22 @@ class EmbeddingManager:
         with self._cache_lock:
             self._text_embedding_cache[cache_key] = vector
         return vector
+
+    @property
+    def uses_model(self) -> bool:
+        return self._embedder is not None
+
+    def embed_query(self, query: str) -> List[float]:
+        """Embeds a short search query against profile documents.
+
+        BGE models (the FastEmbed default) retrieve better when queries carry their
+        retrieval instruction; the hash fallback would only treat it as noise.
+        """
+        if not query:
+            return []
+        if self.uses_model:
+            return self.embed_text(f"{BGE_QUERY_INSTRUCTION}{query}")
+        return self.embed_text(query)
 
     def _fallback_text_embedding(self, text: str, dimensions: int = 96) -> List[float]:
         vector = [0.0] * dimensions

@@ -30,5 +30,23 @@ fallback_response_llm = ChatGroq(
     streaming=True
 )
 
+# Help chatbot router: rewrites + splits + classifies in one JSON call.
+# Groq JSON mode cannot stream, so streaming is disabled even inside astream_events.
+# max_retries=1: the SDK already retries once; more retries only delay the error when a limit is hit.
+help_router_llm = ChatGroq(
+    model=classifier_model,
+    temperature=0,
+    disable_streaming=True,
+    max_retries=1,
+).bind(response_format={"type": "json_object"})
+
+# Help chatbot answers: low temperature so the same question gets the same facts
+help_answer_llm = ChatGroq(
+    model=response_model,
+    temperature=0.2,
+    streaming=True,
+    max_retries=1,
+)
+
 # Backward-compatible export for any older code paths
 llm = response_llm

@@ -1,0 +1,44 @@
+# Feature: AI features
+Route: /messages/:userId (AI Assistant), /my-experties (Magic Builder), /find/getconnection (AI matching), /search
+
+## Summary
+CliQ has four AI features: AI reply suggestions and Ask AI inside chats, the Magic Builder that writes your expertise profile, AI matching of people on Get Connections, and AI meaning-based people search. The CliQ AI help chat (this assistant) only explains how CliQ works.
+
+## How AI reply suggestions work
+1. Open a chat and click the sparkles icon next to the message box. The **AI Assistant** ("Messaging Co-pilot") opens.
+2. Choose the **Generate Reply** tab.
+3. Under **Tone Selection** pick a tone: casual, polite (default), formal, flirty, professional, witty, direct, friendly, empathetic or confident.
+4. Click **Generate Smart Replies**.
+5. The AI reads the recent messages in this chat (the last 40, most recent 20 in full) and shows **Actual Context**, **AI Understanding** (summary, intent, tone), a **Top Recommendation**, **Categorized Options** (Safe, Warm, Playful, Curious, Direct), **More Suggestions**, **With Emojis**, **Without Emojis** and **Rewrite Options**.
+6. Click **Insert** to put a suggestion in your message box, or **Send Now** to send it.
+- Photos, voice notes and files are seen only as "[Image]", "[Voice message]" or "[File]".
+- If either person is under 18, "flirty" is changed to "friendly".
+
+## How to Ask AI about a chat
+1. In the **AI Assistant** choose the **Ask AI** tab ("Ask anything about this chat").
+2. Type in **Ask Message AI about this conversation...** and send, e.g. ask for a summary or reply ideas.
+3. The answer appears step by step.
+- **Ask History** / **Reply History** shows past sessions. Use **New chat** to start fresh, the trash icon to delete one, or **Clear History** to delete all.
+
+## How to generate your expertise profile with AI (Magic Builder)
+1. Open **Settings** > **Edit Expertise** (Expertise Studio).
+2. Click **Magic Builder** (the sparkles button). "AI Architect" opens.
+3. Write about yourself in **Your Professional Narrative** (at least 10 characters). Optionally pick **Focus Areas** and **Key Technologies** (**Explore All** shows more).
+4. Click **Generate Professional Profile**.
+5. Review "Generated Details", then click **Upload** to publish it, **Generate New** to try again, or **Change Manually** to edit it in the form before saving.
+- "Safe Draft" means the AI output was unreliable, so a rule-based draft was made from your facts.
+
+## AI matching and AI search
+- Get Connections (**Explore**) ranks people for you by comparing expertise profiles with AI embeddings. See the Smart connections guide.
+- The suggestion lists **Discover People** (Home) and **Suggested Network** (Find People) are random people, not AI-matched.
+- On **Search** and Find People, searches of two or more words also use AI meaning-based matching ("people who know React and ML").
+
+## Limits
+- The Emoji Preference setting (**Balanced**, **More Emoji**, **No Emoji**) does not change the results yet; both emoji and no-emoji versions are always shown.
+- Magic Builder keeps at most 5 skills and a 50-character title, and uses "Remote" as location; edit these in the form afterwards.
+- The CliQ AI help chat cannot take actions for you, find specific people or posts, or read your account. It is only on the Home page (round sparkles button, bottom right).
+
+## Common problems
+- Problem: "Reply Generator Unavailable" → Fix: click **Try Again** a moment later.
+- Problem: "Tell us a bit more about yourself (min. 10 chars)" → Fix: write at least 10 characters in **Your Professional Narrative**.
+- Problem: "Failed to generate expertise" → Fix: try again later, or fill the form manually and click **Save Expertise**.

@@ -1,0 +1,39 @@
+# Feature: Notifications
+Route: /notifications
+
+## Summary
+Notifications tell you when someone interacts with you: likes, comments, replies, mentions, reposts, connection requests and accepted requests. New ones arrive instantly and an unread count shows next to the bell or the Notifications menu item.
+
+## How to see your notifications
+1. On a computer click **Notifications** in the left sidebar. The badge shows the unread count.
+2. On a phone tap the bell icon at the top.
+- The page shows "N unread" or "You're all caught up".
+- Click **Load more** for older ones.
+
+## What you get notified about
+- Someone likes your post ("liked your post"). Unliking removes it.
+- Someone comments on your post ("commented: …").
+- Someone replies to your comment ("replied: …").
+- Someone mentions you with @ in a post, quote, comment or reply ("mentioned you…").
+- Someone reposts or quotes your post ("reposted your post").
+- Someone sends you a connection request ("wants to connect with you"). It disappears once you accept or reject it.
+- Someone accepts your request ("accepted your connection request").
+- You are never notified about your own actions.
+
+## How to mark notifications as read
+1. Click a notification to open it; it is marked read.
+2. Click **Mark all read** to mark everything read.
+- Click the X on a notification to dismiss it. This deletes it permanently.
+
+## Where a notification takes you
+- Likes, comments, replies, mentions and reposts open the post.
+- Connection requests open **Requests**.
+- Accepted requests open that person's profile.
+
+## Limits
+- Not available yet: notification settings or muting, email or push notifications, notifications for new messages, an unread-only filter, marking as unread.
+
+## Common problems
+- Problem: "No notifications yet" → Fix: likes, comments and connection requests will show up here once people interact with you.
+- Problem: the unread count looks wrong → Fix: refresh the page.
+- Problem: you don't get notified about messages → Fix: message notifications are not available yet; check **Messages**.

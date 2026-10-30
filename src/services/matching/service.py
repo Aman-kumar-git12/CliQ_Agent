@@ -4,7 +4,10 @@ from typing import Any, Dict, List, Optional
 from threading import Lock
 import re
 
-from .config import DEFAULT_TOP_K, DEFAULT_RETRIEVAL_K, RANKING_CONFIG
+from .config import (
+    DEFAULT_TOP_K, DEFAULT_RETRIEVAL_K, RANKING_CONFIG,
+    SEMANTIC_SEARCH_MIN_SCORE, SEMANTIC_SEARCH_FALLBACK_MIN_SCORE,
+)
 from .utils import (
     normalize_text, is_meaningful_text, normalize_terms, merge_unique_terms,
     build_explicit_preference_profile, tokenize, shared_items, cosine_similarity, clamp
@@ -231,6 +234,43 @@ class MatchingService:
             "profileQualityScore": pq_score, "profileQualityLabel": self._profile_quality_label(pq_score),
             "hasMinimumSignal": self._is_discoverable_profile(profile or {}),
         }
+
+    async def semantic_search(self, query: str, candidates: List[Dict[str, Any]], *, top_k: int = 20, min_score: Optional[float] = None) -> List[Dict[str, Any]]:
+        """Ranks candidate profiles against a free-text query ("people who know React and ML").
+
+        Profile vectors come from the same per-profile cache used by rank_candidates,
+        so only the query itself is embedded on a warm cache.
+        """
+        query = normalize_text(query)
+        if not query or not candidates: return []
+        query_vector = self._embedding_manager.embed_query(query)
+        if not query_vector: return []
+
+        if min_score is None:
+            min_score = SEMANTIC_SEARCH_MIN_SCORE if self._embedding_manager.uses_model else SEMANTIC_SEARCH_FALLBACK_MIN_SCORE
+        query_tokens = tokenize([query])
+
+        results = []
+        for c in candidates:
+            c_id = normalize_text(c.get("id"))
+            c_prof = c.get("expertise") or {}
+            if not c_id or not self._is_discoverable_profile(c_prof): continue
+            bundle = self._get_profile_bundle(c_prof, profile_id=c_id, allow_profile_cache=True)
+            score = cosine_similarity(query_vector, bundle["vector"])
+            if score < min_score: continue
+
+            features = bundle["features"]
+            matched_skills = [s for s in features["skills"] if set(tokenize([s])) & set(query_tokens)]
+            matched_interests = [i for i in features["interests"] if set(tokenize([i])) & set(query_tokens)]
+            reasons = []
+            if matched_skills: reasons.append(f"Skills: {', '.join(matched_skills[:3])}")
+            if matched_interests: reasons.append(f"Interests: {', '.join(matched_interests[:2])}")
+            if not reasons and features["headline"]: reasons.append(f"Profile fit: {features['headline'][:90]}")
+
+            results.append({"id": c.get("id"), "score": round(score, 4), "reasons": reasons[:3] or ["Semantically similar profile"]})
+
+        results.sort(key=lambda x: x["score"], reverse=True)
+        return results[:top_k]
 
     async def rank_candidates(self, user_profile: Dict[str, Any], history_profile: Optional[Dict[str, Any]], candidates: List[Dict[str, Any]], *, top_k: int = DEFAULT_TOP_K, retrieval_k: int = DEFAULT_RETRIEVAL_K) -> List[Dict[str, Any]]:
         if not candidates: return []

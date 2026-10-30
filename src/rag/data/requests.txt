@@ -1,27 +1,35 @@
-# Feature: Requests
+# Feature: Connection requests
+Route: /requests
 
-## Overview
-Requests shows incoming connection requests for the logged-in user.
+## Summary
+The Requests page lists people who want to connect with you, so you can accept or reject them. You send requests from Find People, Get Connections, profiles and hover cards. Accepted connections appear in your profile's Connections tab and in Messages.
 
-## What users can do
-- View pending incoming requests.
-- Open the sender's public profile.
-- Use the hover card for quick profile details.
-- Accept a request.
-- Reject a request.
+## How to send a connection request
+1. Click **Connect** on a person's card in Find People, on their profile, or on their hover card.
+2. Or on Get Connections tap the check button (**Interested**) or swipe right.
+- The button changes to **Requested** (or **Request Sent** on hover cards).
+- The other person gets a notification and sees you on their Requests page.
 
-## Request behavior
-- Incoming requests are loaded from requests where:
-  - status is interested
-  - toUserId is the logged-in user
-- Accepting a request changes its status to accepted.
-- Rejecting a request changes its status to rejected.
-- Sent requests can also be cancelled from other app flows.
-- If an earlier request was ignored, the sender can send it again.
+## How to accept or reject a request
+1. Click **Requests** in the left sidebar or bottom bar. The badge shows how many are waiting.
+2. Each request shows the person and the label "Pending".
+3. Click **Accept**, or click the remove-person icon to reject.
+4. Confirm with **YES, ACCEPT** ("Accept Invitation?") or **YES, REJECT** ("Reject Invitation?").
+- You see "Connection Request Accepted" or "Connection Request Rejected".
+- When you accept, the sender is notified.
 
-## After acceptance
-- Accepted users can appear in the messaging flow and start chats.
+## How to cancel a request you sent
+1. Open **Explore** (Get Connections) and click **HISTORY**.
+2. Click **Show** on **Interested**.
+3. Click **Remove Interest** next to the person.
+- There is no list of sent requests on the Requests page.
 
 ## Limits
-- The requests page is for incoming requests only.
-- Rejected requests are not shown as an archive in this page.
+- The Requests page shows incoming requests only.
+- A request you sent cannot be sent again while it is pending or after it was accepted or rejected. Requests to people you ignored can be sent again.
+- Not available yet: removing an accepted connection (unfriend), a list of sent requests, an archive of rejected requests.
+
+## Common problems
+- Problem: "No pending requests" → Fix: nobody is waiting; use the **Discover People** button to find people.
+- Problem: "Something went wrong. Please try again." → Fix: refresh the page and try again; the request may already have been handled.
+- Problem: you want to remove a connection → Fix: this is not available yet.

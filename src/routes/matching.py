@@ -14,6 +14,13 @@ class MatchRequest(BaseModel):
     retrievalK: Optional[int] = None
 
 
+class SemanticSearchRequest(BaseModel):
+    query: str
+    candidates: List[Dict[str, Any]]
+    topK: Optional[int] = None
+    minScore: Optional[float] = None
+
+
 class PrecomputeRequest(BaseModel):
     profileId: str
     profile: Dict[str, Any]
@@ -40,4 +47,19 @@ async def precompute_profile(request: PrecomputeRequest):
         return await matching_service.precompute_profile(request.profileId, request.profile)
     except Exception as e:
         print(f"Profile precompute error: {e}")
+        raise HTTPException(status_code=500, detail=str(e))
+
+
+@router.post("/search")
+async def semantic_search(request: SemanticSearchRequest):
+    try:
+        results = await matching_service.semantic_search(
+            request.query,
+            request.candidates,
+            top_k=request.topK or 20,
+            min_score=request.minScore,
+        )
+        return {"results": results}
+    except Exception as e:
+        print(f"Semantic search error: {e}")
         raise HTTPException(status_code=500, detail=str(e))

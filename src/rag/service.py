@@ -1,186 +1,242 @@
-import json
+import re
 
+import groq
 from langchain_core.runnables import RunnableBranch, RunnableLambda, RunnablePassthrough
 from langchain_core.output_parsers import StrOutputParser
-from langchain_core.prompts import ChatPromptTemplate, MessagesPlaceholder
-from langchain_classic.chains.combine_documents import create_stuff_documents_chain
+from pydantic import BaseModel, Field, ValidationError
 
-from ..core.llm import classifier_llm, response_llm
-from .prompt import DIRECT_RESPONSE_PROMPT, INTENT_PROMPT, RAG_PROMPT
+from ..core.llm import help_answer_llm, help_router_llm
+from .loader import CliQDocumentLoader
+from .prompt import (
+    DIRECT_RESPONSE_PROMPT,
+    LANGUAGE_INSTRUCTIONS,
+    NO_INFO_ANSWER,
+    RAG_PROMPT,
+    ROUTER_PROMPT,
+    SECTION_HINTS,
+)
 from .vectorstore import CliQVectorStore
+
+# gpt-oss models on Groq occasionally emit a stray tool call ("Tool choice is none, but model called a tool")
+LLM_ATTEMPTS = 3
+# Only transient failures are worth retrying. A 400 (e.g. JSON mode's json_validate_failed on a
+# prompt-injection message) fails the same way every time, so retrying only adds seconds.
+# Rate limits are left to the Groq SDK's own retry and the pipeline's limit breaker, so a daily limit fails fast.
+TRANSIENT_ERRORS = (groq.APIConnectionError, groq.APITimeoutError, groq.InternalServerError)
+
+RETRIEVAL_K = 4
+
+MAX_PARTS = 3
+INTENTS = {"steps", "information", "navigation", "greeting", "general_assistance", "out_of_scope"}
+DIRECT_INTENTS = {"greeting", "general_assistance", "out_of_scope"}
+
+GREETINGS = {
+    "hi", "hii", "hello", "hey", "hey there", "hello there", "namaste",
+    "how are you", "how r u", "who are you",
+}
+
+# Per-intent answer style, added only for the intents actually present so the model
+# never sees (and echoes) rules for intents that aren't in this question.
+ANSWER_STYLES = {
+    "steps": "numbered steps in the order the user clicks, with UI labels in **bold** exactly as written in the reference text",
+    "navigation": "the path in backticks, like `Settings > Edit Profile`, then one short sentence",
+    "information": "up to 3 short bullet points, only if they add something",
+    "greeting": "one short friendly line",
+    "general_assistance": "one polite line saying you only help with using CliQ",
+    "out_of_scope": "one polite line saying you only help with CliQ",
+}
+
+DIRECT_INSTRUCTIONS = {
+    "greeting": "Greet the user briefly and offer help with CliQ.",
+    "general_assistance": (
+        "Politely explain that you focus on helping with CliQ features and can't help with general writing tasks."
+    ),
+    "out_of_scope": "Politely explain that you can only help with CliQ platform features and guidance.",
+}
+
+
+class RoutedPart(BaseModel):
+    question: str = ""
+    intent: str = "information"
+    section: str = "cliq_details"
+
+
+class RouterOutput(BaseModel):
+    language: str = "other"
+    parts: list[RoutedPart] = Field(default_factory=list)
+
+
+def _normalize(text):
+    """Lowercases and strips punctuation/emoji so "Hello :)" matches "hello"."""
+    return " ".join(re.sub(r"[^\w\s]", " ", text.lower()).split())
+
+
+def _guess_language(text):
+    return "hindi" if re.search(r"[ऀ-ॿ]", text) else "other"
 
 
 class CliQRAGService:
-    """Production-ready RAG pipeline with intent routing and optimization."""
+    """RAG pipeline: one router call, per-part retrieval, one grounded answer call."""
 
     def __init__(self, vectorstore: CliQVectorStore):
         self.vectorstore = vectorstore
-        self.classifier_llm = classifier_llm
-        self.response_llm = response_llm
 
-        # 1. Contextualize Question
-        self.contextualize_chain = self._build_contextualize_chain()
+        # Valid sections are the knowledge base files, so new files are picked up automatically
+        self.sections = sorted(p.stem for p in CliQDocumentLoader().data_dir.glob("*.txt")) or ["cliq_details"]
+        self.sections_text = "\n".join(
+            f"- {s}: {SECTION_HINTS[s]}" if s in SECTION_HINTS else f"- {s}" for s in self.sections
+        )
 
-        # 2. Intent Classifier
-        self.intent_chain = INTENT_PROMPT | self.classifier_llm | StrOutputParser()
+        # 1. Router: rewrite + split + classify in one JSON call
+        self.router_chain = (ROUTER_PROMPT | help_router_llm | StrOutputParser()).with_retry(
+            retry_if_exception_type=TRANSIENT_ERRORS,
+            stop_after_attempt=LLM_ATTEMPTS,
+        )
 
-        # 3. Direct response chain for greeting and out-of-scope handling
-        self.direct_response_chain = DIRECT_RESPONSE_PROMPT | self.response_llm | StrOutputParser()
-
-        # 4. Document Chain
-        self.document_chain = create_stuff_documents_chain(self.response_llm, RAG_PROMPT)
+        # 2. Answer chains; only these are tagged so the stream route forwards their tokens
+        # {extra_system} is an optional block (user context, link rules) a caller can inject.
+        direct_chain = DIRECT_RESPONSE_PROMPT.partial(extra_system="") | help_answer_llm | StrOutputParser()
+        rag_chain = RAG_PROMPT.partial(no_info=NO_INFO_ANSWER, extra_system="") | help_answer_llm | StrOutputParser()
+        self.direct_chain, self.rag_chain = direct_chain, rag_chain
         self.final_answer_chain = RunnableBranch(
             (
-                lambda x: x["classification_info"]["response_mode"] == "direct",
-                self.direct_response_chain.with_config(tags=["final_response"]),
+                lambda x: x["route"]["mode"] == "direct",
+                direct_chain.with_config(tags=["final_response"]),
             ),
-            self.document_chain.with_config(tags=["final_response"]),
-        )
+            rag_chain.with_config(tags=["final_response"]),
+        ).with_retry(retry_if_exception_type=TRANSIENT_ERRORS, stop_after_attempt=LLM_ATTEMPTS)
 
-    def _build_contextualize_chain(self):
-        system_prompt = (
-            "Given chat history and latest user question, "
-            "rewrite it into a standalone question if needed. "
-            "Do NOT answer."
-        )
+    def _parse_route(self, raw, message):
+        """Validates router JSON, tolerating code fences; never falls back to out_of_scope."""
+        start, end = raw.find("{"), raw.rfind("}")
+        try:
+            routed = RouterOutput.model_validate_json(raw[start:end + 1]) if start != -1 else None
+        except (ValidationError, ValueError):
+            routed = None
 
-        prompt = ChatPromptTemplate.from_messages([
-            ("system", system_prompt),
-            MessagesPlaceholder("chat_history"),
-            ("human", "{input}"),
-        ])
+        if not routed or not routed.parts:
+            # Unclear routing: still try the knowledge base with the raw message
+            return _guess_language(message), [RoutedPart(question=message)]
 
-        return prompt | self.classifier_llm | StrOutputParser()
+        parts = []
+        for part in routed.parts[:MAX_PARTS]:
+            parts.append(RoutedPart(
+                question=part.question.strip() or message,
+                intent=part.intent if part.intent in INTENTS else "information",
+                section=part.section if part.section in self.sections else "cliq_details",
+            ))
+        language = routed.language if routed.language in LANGUAGE_INSTRUCTIONS else "other"
+        return language, parts
 
-    def _get_classification(self, info):
-        standalone_question = info["standalone_question"]
-        chat_history = info["chat_history"]
+    def route(self, message, chat_history=None):
+        """Public step 1: returns {"language": str, "parts": [{"question", "intent", "section"}]}."""
+        language, parts = self._classify(message, chat_history or [])
+        return {"language": language, "parts": [p.model_dump() for p in parts]}
 
-        q = standalone_question.lower().strip()
+    def _classify(self, message, chat_history):
 
-        capability_markers = (
-            "what can you do",
-            "what do you do",
-            "what kind of information",
-            "what types of information",
-            "what information can you",
-            "what info can you",
-            "how can you help",
-            "how do you help",
-            "what can cliq ai do",
-            "what is cliq ai for",
-        )
-
-        greetings = {
-            "hi",
-            "hello",
-            "hey",
-            "how are you",
-            "how r u",
-            "who are you",
-        }
-        if q in greetings:
-            intent = "greeting"
-            section = "cliq_details"
-        elif any(marker in q for marker in capability_markers):
-            intent = "information"
-            section = "cliq_details"
+        if _normalize(message) in GREETINGS:
+            language, parts = _guess_language(message), [RoutedPart(question=message, intent="greeting")]
         else:
-            res = self.intent_chain.invoke({
-                "input": standalone_question,
-                "chat_history": chat_history
-            })
-
             try:
-                classification = json.loads(res)
-            except Exception:
-                classification = {"intent": "out_of_scope", "section": "cliq_details"}
+                raw = self.router_chain.invoke({
+                    "input": message,
+                    "chat_history": chat_history,
+                    "sections": self.sections_text,
+                })
+                language, parts = self._parse_route(raw, message)
+            except groq.BadRequestError as e:
+                # JSON mode rejects output it can't validate; in practice that is an attempt
+                # to make the router break format (prompt injection), so refuse politely.
+                print(f"Router rejected the message, treating it as out of scope: {e}")
+                language, parts = _guess_language(message), [RoutedPart(question=message, intent="out_of_scope")]
+            except Exception as e:
+                print(f"Routing failed, answering from the raw message: {e}")
+                language, parts = self._parse_route("", message)
 
-            intent = classification.get("intent", "out_of_scope")
-            section = classification.get("section", "cliq_details")
+        print(f"Flow: language='{language}', parts={[(p.intent, p.section, p.question) for p in parts]}")
+        return language, parts
 
-        instructions_map = {
-            "greeting": (
-                "Reply in 1 short friendly sentence. Welcome the user and offer help with CliQ."
-            ),
-            "steps": (
-                "Answer with Markdown using this format:\n"
-                "## Steps\n"
-                "- Step 1\n"
-                "- Step 2\n"
-                "- Step 3\n"
-                "Use only steps supported by the provided context. Keep the wording natural and easy to follow."
-            ),
-            "information": (
-                "Answer with Markdown using this format:\n"
-                "## Title\n"
-                "Short paragraph explaining the feature based only on the context.\n"
-                "If useful, add a `### Details` section with short bullet points. Keep the tone conversational and clear."
-            ),
-            "navigation": (
-                "Answer with Markdown using this format:\n"
-                "## Navigation\n"
-                "State the path clearly, such as `Home > Profile > Settings`, "
-                "and then add a short explanation in a natural chat tone."
-            ),
-            "general_assistance": (
-                "Reply in 1 short polite sentence that this assistant is focused on CliQ platform guidance and feature help."
-            ),
-            "out_of_scope": (
-                "Reply in 1 short polite sentence that you can only help with CliQ platform features and guidance."
-            ),
+    def _plan(self, language, parts, docs_by_part=None):
+        """Builds the answer-prompt inputs. docs_by_part: one doc list per part (retrieved if None)."""
+        route = {
+            "mode": "rag",
+            "language_instruction": LANGUAGE_INSTRUCTIONS[language],
+            "direct_instruction": "",
+            "parts_block": "",
         }
 
-        if intent not in instructions_map:
-            intent = "out_of_scope"
+        if all(p.intent in DIRECT_INTENTS for p in parts):
+            route["mode"] = "direct"
+            route["direct_instruction"] = " ".join(dict.fromkeys(DIRECT_INSTRUCTIONS[p.intent] for p in parts))
+            return route
 
-        intent_instructions = instructions_map[intent]
+        if docs_by_part is None:
+            docs_by_part = self.retrieve(parts)
+        blocks = []
+        for i, (part, docs) in enumerate(zip(parts, docs_by_part), start=1):
+            # Each chunk starts with "Feature: <Name> — <heading>" and "Route: <path>".
+            reference = "\n---\n".join(doc.page_content for doc in docs) or "(none)"
+            blocks.append(
+                f"Part {i}\n"
+                f"Question: {part.question}\n"
+                f"Answer style: {ANSWER_STYLES[part.intent]}\n"
+                f"Reference text:\n{reference}"
+            )
+        route["parts_block"] = "\n\n".join(blocks)
+        return route
 
-        print(f"Flow: Intent='{intent}', Section='{section}'")
+    def _route(self, info):
+        language, parts = self._classify(info["input"], info.get("chat_history", []))
+        return self._plan(language, parts)
 
-        if intent in {"greeting", "out_of_scope", "general_assistance"}:
-            return {
-                "context": [],
-                "intent_instructions": intent_instructions,
-                "response_mode": "direct",
-            }
+    def retrieve(self, parts):
+        """Public step 2: one list of Documents per part (empty for greeting/out-of-scope parts).
+        Each Document has metadata section, heading, route, feature and source."""
+        parts = [p if isinstance(p, RoutedPart) else RoutedPart(**p) for p in parts]
+        return [[] if p.intent in DIRECT_INTENTS else self._retrieve(p.question, p.section) for p in parts]
 
-        pre_filter = {"section": {"$eq": section}}
+    async def astream_answer(self, message, language, parts, docs_by_part, extra_system=""):
+        """Public step 3: async iterator of answer text tokens."""
+        parts = [p if isinstance(p, RoutedPart) else RoutedPart(**p) for p in parts]
+        language = language if language in LANGUAGE_INSTRUCTIONS else "other"
+        plan = self._plan(language, parts, docs_by_part)
+        inputs = {"input": message, "extra_system": extra_system, **plan}
+        chain = self.direct_chain if plan["mode"] == "direct" else self.rag_chain
+        async for token in chain.with_config(tags=["final_response"]).astream(inputs):
+            yield token
 
-        docs = self.vectorstore.similarity_search(
-            standalone_question,
-            k=3,
-            pre_filter=pre_filter
+    def _retrieve(self, question, section, k=RETRIEVAL_K):
+        """k chunks from the routed section plus k from all sections, de-duplicated.
+
+        The router can pick a section that does not hold the answer (e.g. sending a
+        request is documented under "find", not "requests"), so results from the whole
+        collection are always merged in.
+        """
+        section_docs = self.vectorstore.similarity_search(
+            question, k=k, pre_filter={"section": {"$eq": section}}
         )
+        global_docs = self.vectorstore.similarity_search(question, k=k)
 
-        if not docs:
-            return {
-                "context": [],
-                "intent_instructions": instructions_map["out_of_scope"],
-                "response_mode": "direct",
-            }
-
-        return {
-            "context": docs,
-            "intent_instructions": intent_instructions,
-            "response_mode": "rag",
-        }
+        docs, seen = [], set()
+        for doc in section_docs + global_docs:
+            if doc.page_content not in seen:
+                seen.add(doc.page_content)
+                docs.append(doc)
+        print("Retrieved: " + "; ".join(
+            f"{d.metadata.get('section')} › {d.metadata.get('heading')}" for d in docs
+        ))
+        return docs
 
     def get_chain(self):
         """Main RAG pipeline"""
 
         return (
-            RunnablePassthrough.assign(
-                standalone_question=lambda x: self.contextualize_chain.invoke(x) if x.get("chat_history") else x["input"]
-            )
+            RunnablePassthrough.assign(route=RunnableLambda(self._route))
             | RunnablePassthrough.assign(
-                classification_info=RunnableLambda(self._get_classification)
+                language_instruction=lambda x: x["route"]["language_instruction"],
+                direct_instruction=lambda x: x["route"]["direct_instruction"],
+                parts_block=lambda x: x["route"]["parts_block"],
             )
-            | RunnablePassthrough.assign(
-                context=lambda x: x["classification_info"]["context"],
-                intent_instructions=lambda x: x["classification_info"]["intent_instructions"]
-            )
-            | RunnablePassthrough.assign(
-                answer=self.final_answer_chain
-            )
+            | RunnablePassthrough.assign(answer=self.final_answer_chain)
         )

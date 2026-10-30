@@ -29,7 +29,11 @@ def build_vectorstore():
     # Ingest new documents
     vectorstore.ingest_documents(documents)
 
-    print("MongoDB Atlas Vector Search ingestion complete!")
+    # Make sure the Atlas Vector Search index exists so queries don't fall back to in-memory search
+    if vectorstore.ensure_vector_index():
+        print("MongoDB Atlas Vector Search ingestion complete!")
+    else:
+        print("Ingestion finished, but the vector index is not ready; queries will use the slow in-memory fallback.")
 
 if __name__ == "__main__":
     build_vectorstore()

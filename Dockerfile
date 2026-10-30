@@ -1,5 +1,5 @@
-# Replicate Render's exact environment (Python 3.11 slim, limited RAM)
-FROM python:3.11-slim
+# Replicate Render's exact environment (Python 3.12 slim, limited RAM)
+FROM python:3.12.7-slim
 
 WORKDIR /app
 

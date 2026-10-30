@@ -25,3 +25,8 @@ RANKING_CONFIG = {
     "explicit_preference_weight": _parse_float(os.getenv("SMART_EXPLICIT_PREFERENCE_WEIGHT"), 0.16),
     "candidate_readiness_weight": _parse_float(os.getenv("SMART_CANDIDATE_READINESS_WEIGHT"), 0.12),
 }
+
+# Minimum cosine similarity for semantic people search. The model and the hash
+# fallback produce very different score ranges, so each has its own floor.
+SEMANTIC_SEARCH_MIN_SCORE = _parse_float(os.getenv("SEMANTIC_SEARCH_MIN_SCORE"), 0.55)
+SEMANTIC_SEARCH_FALLBACK_MIN_SCORE = _parse_float(os.getenv("SEMANTIC_SEARCH_FALLBACK_MIN_SCORE"), 0.2)

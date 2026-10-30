@@ -1,0 +1,69 @@
+# Feature: Posts and interactions
+Route: /post/:postId, /post/:postId/edit, /saved
+
+## Summary
+On any post you can like, comment, reply to comments, repost or quote, save, share and report. Only the author can edit or delete a post, from the post's own page. Saved posts are on the Saved page.
+
+## How to like a post
+1. Click the heart under the post. Click it again to unlike.
+- Hover over the heart to see "Liked by".
+- The author gets a notification. Liking comments is not available yet.
+
+## How to comment and reply
+1. Click the comment icon under a post. The post opens with the comment box.
+2. Type in **Post your reply · @ to mention** and click **Reply**.
+3. To answer a comment, click **Reply** under it, type, and click **Reply** again (or **Cancel**).
+- Replies to replies go into the same thread and start with an @mention of that person.
+- Use "View 2 replies" (the number varies) / **Hide replies** to open or close a thread.
+- Comments can be up to 1,000 characters.
+
+## How to delete or report a comment
+1. Click the three-dot button on the comment.
+2. On your own comment choose **Delete comment** (or **Delete reply**), then **Delete** to confirm. Deleting a comment also deletes its replies.
+3. On someone else's comment choose **Report**.
+- You can only delete your own comments. Editing comments is not available yet.
+
+## How to repost or quote
+1. Click the repost icon (two arrows) under a post.
+2. Choose **Repost** to share it as is, or **Quote** to add your own text.
+3. For a quote, write in "Add your thoughts…" (up to 500 characters) and click **Post**.
+- Click **Undo repost** in the same menu to remove a repost. A quote is a normal post; delete it to remove it.
+- The author gets a notification.
+
+## How to save and find saved posts
+1. Click the bookmark icon on a post, or choose **Save post** in its three-dot menu. Click again (**Remove from saved**) to unsave.
+2. Open saved posts with **Saved** in the left sidebar (on a phone: menu at the top right > **Saved**).
+- Saves are private. Nobody is notified.
+
+## How to share a post
+1. Click **Share** under the post, or **Copy link** in its three-dot menu.
+- On phones the share sheet opens; otherwise the link is copied ("Link copied to clipboard").
+
+## How to report a post
+1. Click the three-dot menu on the post and choose **Report post** (on the post page: **Report Post**).
+2. Choose a reason: Spam, Hate or Abuse, Harassment, Threats or Violence, Sexual or Explicit, Offensive Language, Bullying, Impersonation, or Other.
+3. Click **Submit Report**.
+- Reports are anonymous. You can report a post or comment once; the option then shows **Reported**.
+
+## How to edit your post
+1. Open the post (click its text).
+2. At the top right click the pencil icon (**Edit Post**).
+3. Change the text (up to 500 characters) and click **Save Changes**. Click **Cancel** to stop.
+- Only the text can be edited. You cannot add, change or remove the photo or video.
+- The text cannot be left empty.
+
+## How to delete your post
+1. Open the post (click its text).
+2. At the top right click the trash icon (**Delete Post**).
+3. In "Delete Post?" click **Delete Post**.
+- This cannot be undone. Plain reposts of it are removed; quotes of it show "This post is no longer available."
+
+## Limits
+- Only the author can edit or delete a post. Edit and delete are on the post page, not in the feed card menu.
+- Not available yet: comment likes, editing comments, deleting other people's comments on your post, pinning comments, saved-post folders.
+
+## Common problems
+- Problem: "Failed to update post." → Fix: the text can't be empty and must be 500 characters or fewer; only the author can edit.
+- Problem: "Failed to delete post." → Fix: only the author can delete a post; try again.
+- Problem: "Failed to report ❌" → Fix: you may have reported it already.
+- Problem: "Couldn't repost" → Fix: try again; the original may have been deleted.

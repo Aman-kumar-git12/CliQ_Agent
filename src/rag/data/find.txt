@@ -1,33 +1,41 @@
-# Feature: Find
+# Feature: Find People and Search
+Route: /find/findpeople, /search
 
-## Overview
-The Find area has two parts:
-- Find People
-- Get Connections
+## Summary
+Find People lets you search for people and see suggested users you are not connected with yet. The Search page searches people, posts and hashtags. People search understands skills and roles, and longer descriptions use AI meaning-based matching.
 
-## Find People
-- Users can search by first name or last name.
-- Search is case-insensitive.
-- Users can switch between list view and grid view.
-- Each user card can open the public profile.
-- Users can send a connection request from the card.
-- Hover cards show quick profile information.
-- Suggested users are loaded from the backend and exclude the logged-in user and users already involved in connection records with them.
+## How to search for people on Find People
+1. Click **Explore** in the sidebar (or bottom bar) and choose the **Find People** tab. You can also click **Explore** in the Home sidebar's Discover People box.
+2. Type in **Search by name, skill or role...**. Results appear as you type under "Telemetry Results".
+3. Click a name to open the profile, or click **Connect** to send a request.
+- The button shows **Requested** after you send a request and **Connected** once accepted.
+- Switch between list and grid view with the two icons at the top.
 
-## Get Connections
-- This page shows one random candidate at a time.
-- Users can swipe or press actions to mark a candidate as:
-  - interested
-  - ignored
-- The page fetches another candidate after each action.
-- Users can open the candidate's expertise details from the card.
+## How to use the Search page
+1. Click **Search** in the left sidebar, or the search icon at the top on a phone.
+2. Type in the box (e.g. "React", "#ai" or "people who know React and ML"). Results appear as you type.
+3. Use the tabs **All**, **People**, **Posts** and **Hashtags**.
+- Click a hashtag to see posts with that tag.
+- People found by AI meaning carry an **AI match** badge.
 
-## Connection states used in the app
-- none
-- interested
-- ignored
-- accepted
+## What people search matches
+- First and last name (start of the name).
+- Expertise fields: skills, role/title, interests, experience, headline, about you and projects.
+- Searches of two or more words (e.g. "backend developer with cloud experience") also use AI meaning-based matching, so people with related skills appear even without the exact words.
+- Single words and #hashtags use normal keyword search.
+- Results show what matched, e.g. "Skills: React".
+
+## Suggested users
+- **Suggested Network** on Find People (5 people) and **Discover People** on Home (3 people) are random people you have no connection request with.
+- These suggestions are not AI-matched. AI-matched suggestions are on Get Connections (**Explore**).
 
 ## Limits
-- Suggestions are not AI-matched by skills in the current backend logic.
-- Search is name-based, not semantic search.
+- Searches use up to 100 characters. Find People shows up to 30 people; the Search page shows 8 per section on **All** and 20 on a single tab.
+- You and blocked users never appear in people results.
+- Not available yet: search filters (location, date), search history, searching inside messages.
+
+## Common problems
+- Problem: "AI matching is unavailable right now. Showing keyword matches only." → Fix: results still work by keywords; try again later for AI matches.
+- Problem: no results → Fix: try a shorter query, a skill name, or the person's first name.
+- Problem: **Connect** shows again for someone who rejected you, and clicking it gives "Failed to send request" → Fix: a rejected request cannot be resent.
+- Problem: the **Follow** button in Home's Discover People does nothing → Fix: open the person's profile or use **Connect** on Find People instead.

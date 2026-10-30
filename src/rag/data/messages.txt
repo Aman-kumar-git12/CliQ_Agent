@@ -1,32 +1,43 @@
 # Feature: Messages
+Route: /messages, /messages/:userId
 
-## Overview
-Messages is the direct chat system between connected users.
+## Summary
+Messages is CliQ's one-to-one chat. You can send text, images, files and voice messages, reply to a message, edit your own messages and delete messages for yourself or for everyone. Messages arrive in real time.
 
-## How users start a chat
-- Open the Messages area to see conversation items.
-- Existing conversations are shown first.
-- Accepted connections without a chat yet appear with a "Start a new chat" state.
-- Opening a conversation goes to the message screen for that target user.
+## How to start a chat
+1. Click **Messages** in the left sidebar (or the message icon at the top on a phone).
+2. The inbox (**MESSAGES**) lists your chats and your accepted connections. Connections you haven't chatted with show "Start a new chat".
+3. Click a person to open the chat.
+- You can also click **Chat** on someone's profile, or **Message** in your profile's Connections tab.
+- In an empty chat, tap the sticker ("Tap the sticker to start the conversation") to send a quick hello.
+- Use **Search CLIQ...** to filter the inbox by name.
 
-## What users can send
-- Text messages
-- Images
-- Files
-- Audio files handled through the upload flow
-- Replies to earlier messages
+## How to send messages, photos, files and voice notes
+1. Type in **Type a message...** and press Enter (Shift+Enter adds a new line), or click the send icon.
+2. For a photo or file, click **+**, pick the file, optionally type in **Add a caption...**, then click the send icon.
+3. For a voice message, click the microphone icon, speak, then click the send icon. Click **Cancel** to discard it.
+- Use the smiley icon for emojis.
+- Accepted files: images, .pdf, .doc, .docx and .txt.
 
-## Message actions
-- Edit your own message text
-- Delete for yourself
-- Delete for everyone if you are the sender
-- Bulk delete selected messages
+## How to reply, copy, edit or delete a message
+1. Click a message (or its small arrow) to open its menu.
+2. Choose **Reply**, **Copy Text**, **Edit Message** (your own messages) or **Delete**.
+- **Reply** shows "Replying to …" above the box. Replies work for text messages.
+- **Edit Message** puts the text back in the box; change it and press Enter.
+- **Delete** lets you select one or more messages, then click the trash icon. In "Delete Message?" choose **Delete for everyone** (only your own messages) or **Delete for me**.
+- A message deleted for everyone shows "Message deleted".
 
-## Real-time behavior
-- Messages are delivered through Socket.IO rooms for one-to-one chats.
-- Conversation lists show the latest message and move active chats upward.
-- Online status is tracked through Redis and socket events.
+## Online status
+- The chat header shows **Active Now** when the person is online, otherwise **Offline**.
 
 ## Limits
-- The inbox search filters conversation names, not message contents.
-- Group messaging creation flow is not exposed here, even though group records exist in the schema.
+- The inbox lists accepted connections, but you can also message anyone from the **Chat** button on their profile.
+- Blocked accounts cannot use chat.
+- Inbox search matches names only, not message text.
+- Not available yet: group chats, voice or video calls, read receipts, typing indicators, unread counts in the inbox, searching inside a chat, forwarding, reactions, deleting a whole conversation, "edited" labels.
+
+## Common problems
+- Problem: "❌ Upload failed." or "Cloud upload failed" → Fix: check your connection and try a smaller file.
+- Problem: "Permission denied for microphone" → Fix: allow microphone access for CliQ in your browser settings.
+- Problem: a person isn't in your inbox → Fix: only accepted connections and past chats are listed; open their profile and click **Chat**.
+- Problem: "Failed to delete messages" → Fix: try again; **Delete for everyone** only works for your own messages.

@@ -1,27 +1,34 @@
-# Feature: CliQ Details
+# Feature: About CliQ and CliQ AI
+Route: /home (help chat button)
 
-## Overview
-CliQ is a web app that combines:
-- user profiles
-- public posts
-- connection requests
-- one-to-one messaging
-- an AI help chat
+## Summary
+CliQ is a professional networking web app. You build a profile and expertise, post updates, find and connect with people (including AI-matched suggestions), and chat one to one. CliQ AI is the help assistant that explains how to use CliQ.
 
-## Main product areas
-- Home feed with random posts
-- Suggested users in discovery surfaces
-- Public and private profile views
-- Connection requests and accepted connections
-- Direct messaging between connected users
-- AI chat assistant for platform help
+## What you can do on CliQ
+- Create an account with email or Google, and keep a profile with an expertise page.
+- Post text, one image or one video; like, comment, reply, repost, quote, save, share and report posts.
+- Search people, posts and hashtags.
+- Get AI-matched people on Get Connections (**Explore**) and send connection requests.
+- Chat one to one with text, images, files and voice messages, with AI reply suggestions.
+- Get notifications for likes, comments, replies, mentions, reposts and connection requests.
 
-## What the AI assistant is for
-- Explain how the platform works
-- Help users navigate features
-- Answer questions using the platform knowledge base
-- Suggest users and posts when asked
+## Main pages
+- **Feed** (/home), **Search** (/search), **Explore** (/find/getconnection), **Requests** (/requests), **Messages** (/messages), **Notifications** (/notifications) in the sidebar's Feed section.
+- **New Post** (/create/post) in the Create section.
+- **Profile** (/profile), **Saved** (/saved) and **Settings** (/settings) in the You section.
+- On a phone the bottom bar has **Feed**, **Explore**, **Create**, **Requests** and **Me**; search, notifications, messages and the menu (**Settings**, **Saved**, **Log out**) are at the top.
 
-## Important limits
-- The AI assistant is not controlling the website UI.
-- The platform does not currently implement all future-looking ideas such as advanced AI drafting across the whole product unless explicitly added elsewhere.
+## What CliQ AI (this help assistant) can do
+- Explain CliQ features, where to find them and how to use them, step by step.
+- Answer questions about limits, errors and features that are not available yet.
+
+## What CliQ AI cannot do
+- It cannot do things for you (post, connect, change settings), and it cannot see your account, posts or messages.
+- It cannot find or recommend specific people or posts. For that, use **Search** or **Explore** (Get Connections).
+- It only answers questions about CliQ.
+
+## Other AI features in CliQ
+- AI reply suggestions and Ask AI inside chats, the Magic Builder for your expertise profile, AI matching on Get Connections, and AI meaning-based people search. See the AI features guide.
+
+## Limits
+- The help chat is available on the Home page only (round sparkles button, bottom right).

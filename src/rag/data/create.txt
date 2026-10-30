@@ -1,30 +1,39 @@
-# Feature: Create Post
+# Feature: Create a post
+Route: /create/post
 
-## Overview
-Create Post lets a logged-in user publish a post with required text content and an optional image.
+## Summary
+You can publish a post with text, one image, or one video. Post text can be up to 500 characters, and you can mention people with @ and add topics with #. Posts are public.
 
-## How it works
-1. Open the Create Post page.
-2. Enter post text.
-3. Optionally upload one image.
-4. Confirm the action.
-5. The post is saved and the user is redirected to their profile.
+## How to create a post with a photo or video
+1. Click **New Post** in the left sidebar (or **Create** in the bottom bar on a phone).
+2. Write your text in **Description** ("What's on your mind? Use @ to mention, # for topics"). The counter shows how many of the 500 characters you've used.
+3. Optionally click **Upload Media** and choose one image or one video.
+4. Click **Share Post**.
+5. In the "Create this post?" dialog click **Post**.
+6. You see "Post uploaded successfully" and are taken to your profile.
+- Remove the chosen file with the X on its preview. Click **Cancel** to leave without posting.
 
-## Supported media
-- Image upload only in the current create-post flow.
-- The UI checks for a maximum image size of 10 MB.
+## Post text limit
+- The maximum post length is 500 characters.
+- A post needs text, an image or a video (at least one of them).
 
-## Validation rules
-- Text content is required by the frontend flow.
-- Backend validation allows content or image, but if content is provided it must be 50 characters or fewer.
+## Photos and videos
+- Yes, you can upload a video in a post.
+- Each post can have one file: either one image or one video.
+- Images must be under 10 MB. Videos must be under 50 MB.
+- Only image and video files are accepted.
 
-## Visibility and management
-- Posts are public in the app flow.
-- Users can later edit post text.
-- Users can delete their own posts.
-- Other users can like, comment on, and report posts.
+## Mentions, hashtags and links
+- Type @ and a name to get suggestions; pick a person to mention them. They get a notification.
+- Type # followed by a word to add a topic. Hashtags become links to search results.
+- If the post has a link and no photo or video, a preview card (title, description, image) is shown.
 
 ## Limits
-- The current create-post page does not support video upload.
-- There is no draft system.
-- The page requires an authenticated user.
+- Not available yet: drafts, scheduled posts, several images in one post, polls, private or connections-only posts.
+
+## Common problems
+- Problem: "Image should be less than 10 MB" or "Video should be less than 50 MB" → Fix: choose a smaller file.
+- Problem: "Only image and video files are supported" → Fix: choose an image or video file.
+- Problem: "Add some text or select media before posting" → Fix: write something or add a file.
+- Problem: "Failed to create post" → Fix: check your connection and try again.
+- Problem: the counter stops at 500 → Fix: shorten your text; 500 characters is the maximum.

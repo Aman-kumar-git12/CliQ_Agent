@@ -1,37 +1,48 @@
 # Feature: Profile
+Route: /profile, /public-profile/:userId
 
-## Overview
-The Profile page shows the logged-in user's account information, posts, connections, groups, and expertise.
+## Summary
+Your profile shows your photo, name, email, post count, network count and four tabs: Posts, Connections, Groups and Expertise. Other people's profiles have the same tabs plus buttons to connect and chat.
 
-## Main sections
-- Posts
-- Connections
-- Groups
-- Expertise
+## How to open your profile
+1. Click **Profile** in the left sidebar, or tap **Me** in the bottom bar on a phone.
+- The stat cards are **Posts**, **Network** and **Groups**.
+- The tabs are **Posts**, **Connections**, **Groups** and **Expertise**.
 
-## What users can do
-- View their profile details and counts.
-- Edit basic profile fields such as first name, last name, email, age, and password.
-- Upload or replace the profile image.
-- View their posts.
-- View accepted connections.
-- View groups they belong to.
-- Edit expertise information.
+## How to change your profile photo
+1. Open your profile.
+2. Click the camera icon on your profile picture.
+3. Choose **Upload Image** and pick an image file.
+4. In the "Update Profile Photo" dialog click **Update**.
+- Choose **View Image** from the same menu to see your current photo full size.
+- You can also paste an image link into **Profile Image URL** on the Edit Profile page (Settings > **Edit Profile**).
 
-## Expertise data stored by the app
-- name
-- description
-- experience
-- skills
-- projects
-- achievements
-- interests
-- aboutYou
-- details.email
-- details.address
-- format
+## How to edit your name, email or age
+1. Open **Settings** and click **Edit Profile**.
+2. Change the fields and click **Save Changes**, then **Yes, Update**.
+- The profile page itself has no edit button.
+
+## Profile tabs
+- **Posts**: a grid of your posts ("My Posts"). Reposts carry a **Repost** badge. Click a tile to open the post.
+- **Connections**: your accepted connections. Each has a **Message** button that opens a chat.
+- **Groups**: group chats you belong to. Creating groups is not available yet.
+- **Expertise** ("My Expertise"): your expertise profile in the layout you chose. The eye icon shows it full screen. To edit it, use Settings > **Edit Expertise**.
+
+## Other people's profiles
+1. Click someone's name or photo anywhere in CliQ.
+2. Use **Connect** to send a connection request (it changes to **Requested**, or shows **Connected** once accepted).
+3. Use **Chat** to open a conversation with them.
+- Their tabs are the same: **Posts** ("Recent Posts"), **Connections**, **Groups** and **Expertise** ("Professional Stack").
+
+## Hover cards
+- Holding the mouse over a person's photo for a moment shows a card with their posts, connections and groups counts, a few recent posts, and a **Connect** button (**Request Sent** after clicking, **Connected** if already connected).
 
 ## Limits
-- There is no username editing flow in the backend.
-- The profile page does not implement account switching.
-- The code does not show a dedicated bio field outside the expertise object.
+- There is no username. Handles like @firstname_lastname are made from your name and cannot be edited.
+- Your email is shown on your profile and on your public profile.
+- Not available yet: changing the cover banner, removing or cropping your photo, private profiles, blocking or reporting a person, removing a connection from the profile.
+
+## Common problems
+- Problem: "Failed to upload image" → Fix: choose a normal image file and try again.
+- Problem: blank fields on your expertise show a row of asterisks → Fix: fill those fields in Settings > **Edit Expertise** and click **Save Expertise**.
+- Problem: a Connect button shows the wrong state on someone's profile → Fix: check **Requests** or your **Connections** tab; the button state can be out of date.

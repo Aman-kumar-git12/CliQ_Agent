@@ -1,0 +1,57 @@
+# Feature: Smart connections (Get Connections)
+Route: /find/getconnection
+
+## Summary
+Get Connections (called **Explore** in the sidebar) shows people recommended for you one card at a time. Yes, they are AI-matched: your expertise profile is compared with other people's profiles by meaning using AI embeddings, plus shared skills and interests. You can act on each card and review everything you did in History, Saved and the Dashboard.
+
+## How to open Get Connections
+1. Click **Explore** in the left sidebar, or tap **Explore** in the bottom bar on a phone.
+2. On the Explore page, the **Get Connections** tab is the matcher; the **Find People** tab is search.
+- The page is titled "Intelligence Matcher".
+
+## How AI matching works
+- Yes, suggestions on Get Connections are AI-matched by skills and expertise.
+- The other suggestion lists, **Discover People** on Home and **Suggested Network** on Find People, are random and not AI-matched.
+- Your expertise (title, about you, experience, skills, projects, achievements, interests, location) is turned into an AI embedding and compared with other people's.
+- Shared skills, shared interests, similar profile themes and how complete a profile is all raise the score.
+- It learns from you: people you mark Interested, Preferred or Saved bring similar profiles up; people you Ignore or mark Not Preferred push similar profiles down.
+- Cards can show why they were picked under "Matching Context", e.g. "Shared skills: …".
+- When the page first loads it may show a quick starter batch ("Recommended from your current discovery pool") while the AI ranking finishes.
+- A complete expertise profile (Settings > **Edit Expertise**) gives better matches. If yours is thin, the page shows "Complete your profile to improve the strength of your recommendations."
+
+## How to act on a card
+1. **Interested**: tap the check button or swipe right. This sends the person a connection request ("Request sent").
+2. **Ignore**: tap the X button or swipe left ("User ignored").
+3. **VIEW PROFILE**: opens "Full Identity Intel" with the match reasons and their expertise.
+4. The three-dot menu on the card has **MARK PREFERRED**, **NOT PREFERRED** and **SAVE FOR LATER**.
+- Marking Preferred or Not Preferred does not move to the next card.
+- When no cards are left you see "No more smart matches right now." Click **Refresh Matches** for new ones.
+
+## How to see your history
+1. On Get Connections click **HISTORY** (on a phone, open the menu arrow first).
+2. "Connection History" shows counts for **Saved**, **Ignored**, **Interested**, **Preferred** and **Not Preferred**, plus "Recent Activity".
+3. Click **Show** on a count to see those people. Use **View** to open a profile and **Back To Summary** to go back.
+- Remove buttons per list: **Unsave**, **Remove Ignore**, **Remove Interest**, **Remove Not Preferred**.
+- **Remove Interest** in the Interested list cancels the connection request you sent.
+- In the Saved list you can also move someone to **Preferred** or **Not Preferred**.
+
+## How to use Saved profiles
+1. Click **SAVED** on Get Connections.
+2. "Saved Profiles" lists people you saved. Use **View** to open a profile, **Connect** to send a request (it also removes them from Saved), or the trash icon to remove them.
+
+## How to read the Dashboard
+1. Click **DASHBOARD** on Get Connections.
+2. "Recommendation Dashboard" shows your Saved count, Interest Rate, Save Rate, "Your 14-Day Trend", and overall engine statistics.
+
+## Limits
+- People you have a pending or accepted request with, and people you saved, are not shown again. People marked Not Preferred are hidden for 14 days.
+- People you ignored can appear again later, ranked lower.
+- The match score and confidence are not shown on the card.
+- **Reset Section** in History does not work yet; remove people one by one instead.
+- Not available yet: filters (location, role) on Get Connections, undoing the last swipe.
+
+## Common problems
+- Problem: "No more smart matches right now." → Fix: click **Refresh Matches**, and complete your expertise profile so more people match.
+- Problem: matches don't fit you → Fix: fill in your skills, interests and about you in Settings > **Edit Expertise**, and use **MARK PREFERRED** / **NOT PREFERRED** to teach it.
+- Problem: you swiped right by mistake → Fix: open **HISTORY** > **Show** on Interested and click **Remove Interest** to cancel the request.
+- Problem: "Failed to reset section" → Fix: Reset Section is not working yet; remove people individually.

@@ -1,0 +1,52 @@
+# Feature: Settings and account
+Route: /settings, /edit-profile
+
+## Summary
+The Settings page is where you edit your profile details, open the Expertise Studio, log out, and permanently delete your account. You can change your name, email, age, password and profile image link on the Edit Profile page.
+
+## How to open Settings
+1. On a computer, click **Settings** in the left sidebar (section "You").
+2. On a phone, tap the menu icon at the top right, then **Settings**.
+- The page shows your name and email and two sections: **Account** and **Danger Zone**.
+
+## How to edit your profile details
+1. Open **Settings** and click **Edit Profile** ("Update your personal information").
+2. Change any of **First Name**, **Last Name**, **Email Address**, **Age**, **Password (Optional)** or **Profile Image URL**.
+3. Click **Save Changes**.
+4. In the "Save Changes?" dialog click **Yes, Update**. You are taken to your profile.
+- First Name, Last Name, Email Address and Age cannot be left empty.
+
+## How to change your password while logged in
+1. Open **Settings** > **Edit Profile**.
+2. Type the new password in **Password (Optional)**. You do not need your old password.
+3. Click **Save Changes**, then **Yes, Update**.
+- Leave **Password (Optional)** empty to keep your current password.
+- If you are logged out and forgot your password, use **Forgot Password?** on the login page instead.
+
+## How to change your email
+1. Open **Settings** > **Edit Profile**.
+2. Type the new email in **Email Address**.
+3. Click **Save Changes**, then **Yes, Update**.
+- The new email is not re-verified with a code.
+- The email must not already be used by another account.
+
+## How to delete your account
+1. Open **Settings**.
+2. In **Danger Zone** click **Delete Profile** ("Permanently remove your account").
+3. In the "Delete Profile?" dialog click **Yes, Delete**.
+- This is permanent and cannot be undone. Your profile and your posts, likes, comments, connection requests and messages are removed.
+- There is no deactivate option and no way to recover a deleted account.
+
+## Other Settings items
+- **Edit Expertise** ("Manage your professional skills & templates") opens the Expertise Studio (/my-experties).
+- **Log Out** ("Sign out of your CLIQ account") logs you out after you confirm **Yes, Log Out**.
+
+## Limits
+- Not available yet: notification settings, privacy settings, hiding your email, two-factor login, changing your theme, changing a username (CliQ has no usernames; handles like @firstname_lastname come from your name).
+
+## Common problems
+- Problem: an error appears when saving a new email → Fix: that email is probably used by another account; choose a different one.
+- Problem: "Something went wrong. Try again." when saving → Fix: check that First Name, Last Name, Email Address and Age are filled in, then try again.
+- Problem: the sidebar still shows your old name → Fix: refresh the page.
+- Problem: you set a password on a Google-only account but still cannot log in with it → Fix: Google-only accounts must use **Sign in with Google**.
+- Problem: "Failed to delete profile. Please try again." → Fix: try again later; your account was not deleted.

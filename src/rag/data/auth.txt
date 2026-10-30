@@ -1,0 +1,87 @@
+# Feature: Sign up, login and account access
+Route: / (sign up), /login, /verify-otp, /blocked-account
+
+## Summary
+You create a CliQ account with your email and password or with Google. New email accounts confirm their email with a 6-digit code before they can log in. If you forget your password you reset it with a code sent to your email, and if your account is blocked you can ask the CliQ team to review it.
+
+## How to sign up with email
+1. Open the sign up page (/). The form is titled **Register Now!**.
+2. Fill in **First name**, **Last name**, **Enter email**, **Password** and **Age**.
+3. Tick the box "By creating an account, you agree to the Terms and Privacy Policy."
+4. Click **Create an account**.
+5. You are taken to the code page (**Check your email**). Enter the 6-digit code from the email to finish (see "How to verify your email with the code").
+
+## How to sign up or log in with Google
+1. On the sign up page click **Sign up with Google**, or on the login page click **Sign in with Google**.
+2. Choose your Google account. You are logged in and taken to your feed.
+- Both buttons work the same way: if no CliQ account exists for that Google email, one is created.
+- Google accounts do not need email verification.
+- If you already have an email-and-password account with the same email, Google sign-in links to it and you can use either method afterwards.
+
+## How to log in
+1. Open the login page (/login). The form is titled **Login Now!**.
+2. Enter your email (**Enter email**) and password (**Enter password**).
+3. Click **Login**. You are taken to your feed (/home).
+- New here? Use the **Signup** link to create an account.
+- You stay logged in for 30 days.
+
+## How to verify your email with the code
+1. After signing up you land on the **Check your email** page. It says "We sent a 6-digit code to" your email.
+2. Type or paste the 6 digits. The code submits automatically when all 6 are filled, or click **Verify**.
+3. You see **Verified!**, are logged in, and are taken to your feed.
+- Didn't get it? Click **Resend code** under "Didn't receive the code?".
+- "Code expires in 10 minutes · Check your spam folder if needed".
+
+## How to reset a forgotten password
+1. On the login page click **Forgot Password?**. The form changes to **Reset Password**.
+2. Enter your email and your new password in **Enter new password** (at least 8 characters).
+3. Click **Send OTP**.
+4. On the **Password Reset** page enter the 6-digit code from the email (or click **Verify**).
+5. You are logged in automatically and taken to your feed.
+- To go back without resetting, click **Back to Login**.
+- The code expires in 10 minutes. Click **Resend code** to get a new one.
+- Accounts that only use Google sign-in cannot reset a password; use **Sign in with Google**.
+
+## Blocked accounts
+- If your account is blocked, logging in or opening CliQ shows the page **This Account Has Been Blocked** with the message "Your account has been blocked. Please contact support."
+- Accounts are blocked by the CliQ team. Wrong passwords never block an account.
+- A blocked account cannot use CliQ until the team unblocks it.
+
+## How to request an unblock
+1. On the blocked account page click **Ask For Unblock**.
+2. In **Enter your blocked account email** type the email of the blocked account.
+3. In the text box explain why your account should be reviewed and unblocked.
+4. Click **Submit Request**. You see "Your unblock request has been submitted. Our team will review it." and are taken back to the login page.
+- To leave the page, click **Back To Login**.
+- The CliQ team reviews requests by hand. There is no automatic unblock, and you cannot check the status of a request in the app.
+
+## How to log out
+1. Open **Settings**.
+2. Click **Log Out** ("Sign out of your CLIQ account").
+3. Confirm with **Yes, Log Out**.
+- On a phone you can also open the menu at the top right and choose **Log out**, then **Yes, Logout**.
+
+## Limits
+- Password at sign up: at least 8 characters with an uppercase letter, a lowercase letter, a number and a symbol.
+- New password when resetting: at least 8 characters.
+- You must be at least 13 years old to sign up.
+- Codes are 6 digits and expire after 10 minutes. Each new code replaces the previous one.
+- After a code is sent you must wait 10 minutes before asking for another email verification code.
+- Unblock requests: one per hour, at most 5 per account.
+- Not available yet: two-factor login, "log out of all devices", "remember me", login with anything other than email or Google, account switching.
+
+## Common problems
+- Problem: "Invalid credentials" when logging in → Fix: check the email and password. If you forgot the password, click **Forgot Password?**.
+- Problem: "Please verify your email before logging in." → Fix: enter the 6-digit code from your sign up email on the **Check your email** page. If you no longer have that page open, sign up again with the same email; this sends a fresh code and opens the code page.
+- Problem: "Use Google sign-in" → Fix: this email belongs to a Google account. Click **Sign in with Google**.
+- Problem: "Password should be strong" at sign up → Fix: use at least 8 characters including an uppercase letter, a lowercase letter, a number and a symbol.
+- Problem: "Age must be at least 13 years" → Fix: CliQ is only for people aged 13 or older.
+- Problem: "User already exists" → Fix: this email already has a verified account. Log in instead, or use **Forgot Password?**.
+## Common problems with codes and unblock requests
+- Problem: "Invalid verification code. Please check and try again." → Fix: re-type the latest code. Only the newest code works.
+- Problem: "This code has expired. Please request a new one." → Fix: click **Resend code**.
+- Problem: "Please wait 10 minutes before requesting a new code." → Fix: wait, and check your spam folder for the earlier code meanwhile.
+- Problem: "This account uses Google sign-in. Password reset is not available." → Fix: log in with **Sign in with Google**.
+- Problem: "You can send your next unblock request after N minute(s)." → Fix: unblock requests are limited to one per hour; try again later.
+- Problem: "You have reached the maximum of 5 unblock requests for this account." → Fix: no more requests can be sent; wait for the team's review.
+- Problem: after logging out you still see the feed → Fix: refresh the page.

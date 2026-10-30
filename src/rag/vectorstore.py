@@ -1,8 +1,12 @@
 import os
+import time
 import certifi
 from pymongo import MongoClient
 from langchain_mongodb import MongoDBAtlasVectorSearch
 from langchain_community.embeddings.fastembed import FastEmbedEmbeddings
+
+# BAAI/bge-small-en-v1.5 produces 384-dimensional vectors
+EMBEDDING_DIMENSIONS = 384
 
 class CliQVectorStore:
     """Manages the connection and operations for the MongoDB Atlas Vector Search."""
@@ -29,7 +33,7 @@ class CliQVectorStore:
             embedding_key="embedding"
         )
 
-    def similarity_search(self, query: str, k: int = 3, pre_filter: dict = None):
+    def similarity_search(self, query: str, k: int = 4, pre_filter: dict = None):
         """Performs a similarity search with optional metadata filtering."""
         print(f"Searching for: '{query}' with filter: {pre_filter}")
         
@@ -81,18 +85,60 @@ class CliQVectorStore:
             print(f"Local fallback search failed: {e}")
             return []
 
+    def _index_status(self):
+        for idx in self.collection.list_search_indexes(self.index_name):
+            return idx.get("status"), bool(idx.get("queryable"))
+        return None, False
+
+    def ensure_vector_index(self, wait_seconds: float = 300):
+        """Creates the Atlas Vector Search index if needed and waits until it is READY.
+
+        Index definition (same JSON can be pasted into the Atlas UI JSON editor):
+        {"fields": [
+            {"type": "vector", "path": "embedding", "numDimensions": 384, "similarity": "cosine"},
+            {"type": "filter", "path": "section"}
+        ]}
+        Returns True once the index is queryable.
+        """
+        status, queryable = self._index_status()
+        if status is None:
+            print(f"Creating vector search index '{self.index_name}'...")
+            try:
+                self.vector_search.create_vector_search_index(
+                    dimensions=EMBEDDING_DIMENSIONS,
+                    filters=["section"],
+                )
+            except Exception as e:
+                print(
+                    f"Could not create vector search index automatically: {e}\n"
+                    "Create it in the Atlas UI: Database > Browse Collections > "
+                    f"{self.database_name}.{self.collection_name} > Search Indexes > Create Search Index > "
+                    "Atlas Vector Search > JSON Editor, name it "
+                    f"'{self.index_name}', and paste the definition from CliQVectorStore.ensure_vector_index."
+                )
+                return False
+        else:
+            print(f"Vector search index '{self.index_name}' already exists (status: {status}).")
+
+        deadline = time.time() + wait_seconds
+        while True:
+            status, queryable = self._index_status()
+            if status == "READY" and queryable:
+                print(f"Vector search index '{self.index_name}' is READY.")
+                return True
+            if status == "FAILED" or time.time() > deadline:
+                print(f"Vector search index '{self.index_name}' is not ready (status: {status}).")
+                return False
+            print(f"Waiting for index '{self.index_name}' (status: {status})...")
+            time.sleep(5)
+
     def clear_collection(self):
         """Deletes all documents from the vector collection."""
         print(f"Clearing collection: {self.collection_name}")
         self.collection.delete_many({})
 
     def ingest_documents(self, documents):
-        """Splits and ingests documents into the vector store."""
-        from langchain_text_splitters import RecursiveCharacterTextSplitter
-        
-        splitter = RecursiveCharacterTextSplitter(chunk_size=700, chunk_overlap=120)
-        split_docs = splitter.split_documents(documents)
-        
-        print(f"Ingesting {len(split_docs)} chunks into {self.collection_name}...")
-        # Use add_documents to preserve the instance configuration and metadata
-        return self.vector_search.add_documents(split_docs)
+        """Embeds and stores documents. CliQDocumentLoader already chunks by heading,
+        so no character-based splitting happens here."""
+        print(f"Ingesting {len(documents)} chunks into {self.collection_name}...")
+        return self.vector_search.add_documents(documents)
