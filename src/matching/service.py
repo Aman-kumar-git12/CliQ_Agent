@@ -38,7 +38,7 @@ class MatchingService:
         self._profile_cache: dict[str, Bundle] = {}
         self._cache_lock = Lock()
 
-    def _is_discoverable(self, profile: dict[str, Any]) -> bool | list[str]:
+    def _is_discoverable(self, profile: dict[str, Any]) -> bool:
         return has_minimum_signal(build_profile_features(profile), self._weights.min_discoverable_completeness)
 
     def _get_profile_bundle(self, profile: dict[str, Any], profile_id: str | None = None) -> Bundle:

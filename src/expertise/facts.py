@@ -50,7 +50,7 @@ MAX_FACT_SKILLS = 8
 
 YEARS_PATTERN = re.compile(r"\b(\d+\+?)\s*(?:years?|yrs?)\b", re.IGNORECASE)
 PERCENTAGE_PATTERN = re.compile(
-    r"\b\d+(?:\.\d+)?%\b(?:\s+(?:growth|increase|improvement|reduction|boost|uptime|accuracy|conversion|retention"
+    r"\b\d+(?:\.\d+)?%(?:\s+(?:growth|increase|improvement|reduction|boost|uptime|accuracy|conversion|retention"
     r"|engagement|efficiency|performance))?",
     re.IGNORECASE,
 )

@@ -89,7 +89,7 @@ def test_profile_features_and_quality() -> None:
 
 def test_has_minimum_signal_keeps_legacy_empty_list() -> None:
     assert has_minimum_signal(build_profile_features(USER), 1) is True
-    assert has_minimum_signal(build_profile_features({}), 1) == []
+    assert has_minimum_signal(build_profile_features({}), 1) is False
 
 
 def test_explicit_preferences_read_nested_containers() -> None:

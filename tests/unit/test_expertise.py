@@ -11,7 +11,13 @@ from langchain_core.runnables import RunnableLambda
 
 from src.expertise.dependencies import get_expertise_service
 from src.expertise.drafting import build_minimal_fallback, validate_and_finalize
-from src.expertise.facts import extract_company_names, extract_protected_facts, extract_title, extract_years_phrase
+from src.expertise.facts import (
+    extract_company_names,
+    extract_percentages,
+    extract_protected_facts,
+    extract_title,
+    extract_years_phrase,
+)
 from src.expertise.normalization import canonicalize_skill, normalize_generated_skills, split_terms
 from src.expertise.router import router
 from src.expertise.service import ExpertiseService, parse_json_object
@@ -78,7 +84,8 @@ def test_validate_and_finalize_restores_dropped_facts() -> None:
     assert result["skills"] == ["React", "Node.js", "Tailwind CSS", "Docker"]
     # "12 projects" is already in the highlights the projects text came from, so it is not appended twice
     assert result["projects"] == ANSWERS["highlights"]
-    assert result["achievements"] == "Won. Certifications: CKA."
+    # "35% growth" was dropped by the model, so it is restored along with the certification
+    assert result["achievements"] == "Won. Measured impact: 35% growth. Certifications: CKA."
     assert result["format"] == 1
 
 
@@ -197,3 +204,8 @@ def test_route_error_is_500_with_message() -> None:
 def test_route_rejects_unknown_fields() -> None:
     response = _client(FakeExpertiseService()).post("/api/expertise/generate", json={**REQUEST, "extra": 1})
     assert response.status_code == 422
+
+
+def test_percentages_followed_by_words_are_protected() -> None:
+    text = "Drove 35% growth, cut costs by 12.5% and kept 99.9% uptime."
+    assert extract_percentages(text) == ["35% growth", "12.5%", "99.9% uptime"]

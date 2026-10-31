@@ -75,16 +75,12 @@ def build_profile_features(profile: dict[str, Any]) -> Features:
     }
 
 
-def has_minimum_signal(features: Features, min_completeness: int) -> bool | list[str]:
-    """Whether a profile has enough signal to be shown to others.
-
-    For a profile with no signal at all this returns the empty text_fields list instead of False.
-    That value is sent as-is in the precompute response ("hasMinimumSignal": []), so it is kept.
-    """
+def has_minimum_signal(features: Features, min_completeness: int) -> bool:
+    """Whether a profile has enough signal to be shown to others."""
     has_core_signal = (
         bool(features["headline"]) or features["skills"] or features["interests"] or features["text_fields"]
     )
-    return has_core_signal and features["completeness"] >= min_completeness
+    return bool(has_core_signal) and features["completeness"] >= min_completeness
 
 
 def profile_signature(profile: dict[str, Any] | None) -> str:
