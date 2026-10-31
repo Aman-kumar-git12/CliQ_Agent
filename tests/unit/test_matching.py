@@ -8,6 +8,7 @@ from fastapi import FastAPI
 from fastapi.testclient import TestClient
 
 from src.core.config import Settings
+from src.core.security import require_internal_key
 from src.matching import embedding
 from src.matching.dependencies import get_matching_service
 from src.matching.embedding import TextEmbedder, cosine_similarity, hash_embedding
@@ -179,6 +180,7 @@ class FakeMatchingService:
 def _client(service: Any) -> TestClient:
     app = FastAPI()
     app.include_router(router, prefix="/api/match")
+    app.dependency_overrides[require_internal_key] = lambda: None
     app.dependency_overrides[get_matching_service] = lambda: service
     return TestClient(app)
 
@@ -221,6 +223,7 @@ def test_routes_turn_errors_into_500(path: str, body: dict[str, Any]) -> None:
 def test_routes_use_app_state_service() -> None:
     app = FastAPI()
     app.include_router(router, prefix="/api/match")
+    app.dependency_overrides[require_internal_key] = lambda: None
     app.state.matching = MatchingService(TextEmbedder(None), RankingWeights())
     response = TestClient(app).post("/api/match/precompute", json={"profileId": "", "profile": {}})
     assert response.status_code == 500

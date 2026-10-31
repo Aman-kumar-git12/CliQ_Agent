@@ -5,13 +5,14 @@ from typing import Any
 
 from fastapi import APIRouter, Depends, HTTPException
 
+from ..core.security import require_internal_key
 from .dependencies import get_matching_service
 from .schemas import MatchRequest, PrecomputeRequest, SemanticSearchRequest
 from .service import DEFAULT_RETRIEVAL_K, DEFAULT_SEARCH_TOP_K, DEFAULT_TOP_K, MatchingService
 
 logger = logging.getLogger(__name__)
 
-router = APIRouter()
+router = APIRouter(dependencies=[Depends(require_internal_key)])
 
 
 @router.post("/match", response_model=None)

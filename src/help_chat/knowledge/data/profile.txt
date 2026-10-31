@@ -31,7 +31,7 @@ Your profile shows your photo, name, email, post count, network count and four t
 ## Other people's profiles
 1. Click someone's name or photo anywhere in CliQ.
 2. Use **Connect** to send a connection request (it changes to **Requested**, or shows **Connected** once accepted).
-3. Use **Chat** to open a conversation with them.
+3. Use **Chat** to open a conversation with them (you can send messages once you are connected).
 - Their tabs are the same: **Posts** ("Recent Posts"), **Connections**, **Groups** and **Expertise** ("Professional Stack").
 
 ## Hover cards

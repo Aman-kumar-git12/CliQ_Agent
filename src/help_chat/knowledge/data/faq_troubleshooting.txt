@@ -21,7 +21,7 @@ Quick answers to common problems and to questions about features CliQ does not h
 ## Connections and chat problems
 - Problem: no more matches on Get Connections → Fix: click **Refresh Matches** and complete your expertise profile.
 - Problem: can't remove a connection → Fix: removing connections is not available yet.
-- Problem: someone isn't in your Messages inbox → Fix: open their profile and click **Chat**.
+- Problem: someone isn't in your Messages inbox → Fix: you can only message connections; send them a connection request, and once they accept, open their profile and click **Chat**.
 - Problem: upload failed in chat → Fix: try a smaller file and check your connection.
 
 ## Features not available yet

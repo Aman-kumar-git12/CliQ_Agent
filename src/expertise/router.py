@@ -6,13 +6,14 @@ from typing import Any
 from fastapi import APIRouter, Depends, HTTPException
 from pydantic import BaseModel
 
+from ..core.security import require_internal_key
 from .dependencies import get_expertise_service
 from .schemas import ExpertiseGenerateRequest, ExpertiseGenerateResponse
 from .service import ExpertiseService
 
 logger = logging.getLogger(__name__)
 
-router = APIRouter()
+router = APIRouter(dependencies=[Depends(require_internal_key)])
 
 
 @router.post("/generate", response_model=ExpertiseGenerateResponse)

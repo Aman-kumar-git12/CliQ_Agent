@@ -57,7 +57,7 @@ src/
 │   ├── database.py    the one MongoDB client
 │   ├── embeddings.py  the local embedding model (bge-small-en-v1.5)
 │   ├── llm.py         Groq model factories
-│   └── security.py    X-Internal-Key check for backend-only endpoints
+│   └── security.py    X-Internal-Key check, required on every feature endpoint
 ├── help_chat/         router → service → pipeline (routing → retrieval → answering)
 │   └── knowledge/     knowledge base files, chunking, vector store, ingest script
 ├── message_assistant/

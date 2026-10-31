@@ -15,7 +15,7 @@ from .service import HelpChatService
 
 logger = logging.getLogger(__name__)
 
-router = APIRouter(prefix="/chat", tags=["help chat"])
+router = APIRouter(prefix="/chat", tags=["help chat"], dependencies=[Depends(require_internal_key)])
 
 
 def _sse(event: str, data: dict) -> str:
@@ -66,11 +66,10 @@ async def kb_version(service: HelpChatService = Depends(get_help_chat_service)) 
     return KbVersionResponse(kbVersion=await service.kb_version())
 
 
-@router.post("/feedback", response_model=OkResponse, dependencies=[Depends(require_internal_key)])
+@router.post("/feedback", response_model=OkResponse)
 async def chat_feedback(
     request: FeedbackRequest, service: HelpChatService = Depends(get_help_chat_service)
 ) -> OkResponse:
-    """Votes change answers for every user, so only the backend (with the internal key) may send them."""
     await service.record_feedback(request)
     return OkResponse()
 

@@ -1,41 +1,40 @@
-# Feature: Find People and Search
-Route: /find/findpeople, /search
+# Feature: Search
+Route: /search
 
 ## Summary
-Find People lets you search for people and see suggested users you are not connected with yet. The Search page searches people, posts and hashtags. People search understands skills and roles, and longer descriptions use AI meaning-based matching.
+Search is the one place to find people, posts and hashtags. With an empty search box it shows **Suggested Network**, people you are not connected with yet. People search understands skills and roles, and longer descriptions use AI meaning-based matching. (Find People used to be a tab on Explore; it is now part of Search.)
 
-## How to search for people on Find People
-1. Click **Explore** in the sidebar (or bottom bar) and choose the **Find People** tab. You can also click **Explore** in the Home sidebar's Discover People box.
-2. Type in **Search by name, skill or role...**. Results appear as you type under "Telemetry Results".
-3. Click a name to open the profile, or click **Connect** to send a request.
-- The button shows **Requested** after you send a request and **Connected** once accepted.
-- Switch between list and grid view with the two icons at the top.
-
-## How to use the Search page
-1. Click **Search** in the left sidebar, or the search icon at the top on a phone.
+## How to search for people, posts and hashtags
+1. Click **Search** in the left sidebar, or the search icon at the top on a phone. The **Explore** link in the Home sidebar's Discover People box also opens Search.
 2. Type in the box (e.g. "React", "#ai" or "people who know React and ML"). Results appear as you type.
 3. Use the tabs **All**, **People**, **Posts** and **Hashtags**.
 - Click a hashtag to see posts with that tag.
-- People found by AI meaning carry an **AI match** badge.
+- People found by AI meaning carry an **AI match** badge, and each card shows what matched, e.g. "Skills: React".
+
+## How to connect with someone from Search
+1. Find the person in **Suggested Network** (empty search box) or in the **People** results.
+2. Click a name to open the profile, or click **Connect** to send a request.
+- The button shows **Requested** after you send a request and **Connected** once accepted.
+- Switch between list and grid view with the two icons next to the section title.
 
 ## What people search matches
 - First and last name (start of the name).
 - Expertise fields: skills, role/title, interests, experience, headline, about you and projects.
 - Searches of two or more words (e.g. "backend developer with cloud experience") also use AI meaning-based matching, so people with related skills appear even without the exact words.
 - Single words and #hashtags use normal keyword search.
-- Results show what matched, e.g. "Skills: React".
 
 ## Suggested users
-- **Suggested Network** on Find People (5 people) and **Discover People** on Home (3 people) are random people you have no connection request with.
-- These suggestions are not AI-matched. AI-matched suggestions are on Get Connections (**Explore**).
+- **Suggested Network** on Search (5 people) and **Discover People** on Home (3 people) are random people you have no connection request with.
+- These suggestions are not AI-matched. AI-matched suggestions are on **Explore** (Get Connections).
 
 ## Limits
-- Searches use up to 100 characters. Find People shows up to 30 people; the Search page shows 8 per section on **All** and 20 on a single tab.
+- Searches use up to 100 characters. Search shows 8 results per section on **All** and 20 on a single tab.
 - You and blocked users never appear in people results.
 - Not available yet: search filters (location, date), search history, searching inside messages.
 
 ## Common problems
 - Problem: "AI matching is unavailable right now. Showing keyword matches only." → Fix: results still work by keywords; try again later for AI matches.
 - Problem: no results → Fix: try a shorter query, a skill name, or the person's first name.
-- Problem: **Connect** shows again for someone who rejected you, and clicking it gives "Failed to send request" → Fix: a rejected request cannot be resent.
-- Problem: the **Follow** button in Home's Discover People does nothing → Fix: open the person's profile or use **Connect** on Find People instead.
+- Problem: **Connect** shows again for someone who rejected you, and clicking it gives an error → Fix: a rejected request cannot be resent.
+- Problem: the **Follow** button in Home's Discover People does nothing → Fix: open the person's profile, or use **Connect** on Search instead.
+- Problem: an old link to Find People → Fix: it now opens Search automatically.

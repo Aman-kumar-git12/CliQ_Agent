@@ -8,7 +8,7 @@ Messages is CliQ's one-to-one chat. You can send text, images, files and voice m
 1. Click **Messages** in the left sidebar (or the message icon at the top on a phone).
 2. The inbox (**MESSAGES**) lists your chats and your accepted connections. Connections you haven't chatted with show "Start a new chat".
 3. Click a person to open the chat.
-- You can also click **Chat** on someone's profile, or **Message** in your profile's Connections tab.
+- You can also click **Chat** on someone's profile, or **Message** in your profile's Connections tab. You can only send messages to your connections.
 - In an empty chat, tap the sticker ("Tap the sticker to start the conversation") to send a quick hello.
 - Use **Search CLIQ...** to filter the inbox by name.
 
@@ -17,7 +17,7 @@ Messages is CliQ's one-to-one chat. You can send text, images, files and voice m
 2. For a photo or file, click **+**, pick the file, optionally type in **Add a caption...**, then click the send icon.
 3. For a voice message, click the microphone icon, speak, then click the send icon. Click **Cancel** to discard it.
 - Use the smiley icon for emojis.
-- Accepted files: images, .pdf, .doc, .docx and .txt.
+- Accepted files: images, .pdf, .doc, .docx and .txt, up to 10 MB each.
 
 ## How to reply, copy, edit or delete a message
 1. Click a message (or its small arrow) to open its menu.
@@ -31,13 +31,17 @@ Messages is CliQ's one-to-one chat. You can send text, images, files and voice m
 - The chat header shows **Active Now** when the person is online, otherwise **Offline**.
 
 ## Limits
-- The inbox lists accepted connections, but you can also message anyone from the **Chat** button on their profile.
+- You can only message your connections (accepted requests). If you are not connected, the chat shows "You can message <name> once you're connected" instead of the message box, with a **View profile** link.
+- Old chats with someone you are no longer connected to stay readable but you cannot send new messages.
 - Blocked accounts cannot use chat.
 - Inbox search matches names only, not message text.
 - Not available yet: group chats, voice or video calls, read receipts, typing indicators, unread counts in the inbox, searching inside a chat, forwarding, reactions, deleting a whole conversation, "edited" labels.
 
 ## Common problems
-- Problem: "❌ Upload failed." or "Cloud upload failed" → Fix: check your connection and try a smaller file.
+- Problem: "❌ File is too large" → Fix: chat files must be under 10 MB.
+- Problem: "❌ This file type isn't supported" → Fix: send an image, voice note, .pdf, .doc, .docx or .txt.
+- Problem: "❌ Upload failed." or "Cloud upload failed" → Fix: check your connection and try again.
 - Problem: "Permission denied for microphone" → Fix: allow microphone access for CliQ in your browser settings.
-- Problem: a person isn't in your inbox → Fix: only accepted connections and past chats are listed; open their profile and click **Chat**.
+- Problem: a person isn't in your inbox → Fix: only accepted connections and past chats are listed; connect with them first.
+- Problem: "You can only message your connections" → Fix: send a connection request and wait for them to accept it.
 - Problem: "Failed to delete messages" → Fix: try again; **Delete for everyone** only works for your own messages.

@@ -23,7 +23,7 @@ Home is the main feed. It shows posts from other people in random order, with a 
 - Use the menu icon for **Chat History**: **New Chat**, delete a chat, or **Clear All History**.
 
 ## Discover People
-- On wide screens the right sidebar's **Discover People** shows 3 random people you are not connected with. **Explore** opens Find People.
+- On wide screens the right sidebar's **Discover People** shows 3 random people you are not connected with. **Explore** opens Search, where you can find people.
 - These are not AI-matched; AI matches are on **Explore** (Get Connections).
 
 ## Limits

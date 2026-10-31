@@ -7,7 +7,7 @@ from src.help_chat.suggestions import STARTER_PROMPTS, FollowUpSuggester, headin
 
 
 def test_describe_page() -> None:
-    assert describe_page("/find/findpeople?x=1") == ("Find People (/find/findpeople)", "find")
+    assert describe_page("/search?q=react") == ("Search (/search)", "find")
     assert describe_page("/post/123") == ("a single post's page", "create")
     assert describe_page("/<script>") == (None, None)
     assert describe_page(None) == (None, None)

@@ -9,6 +9,7 @@ from fastapi import FastAPI
 from fastapi.testclient import TestClient
 from pydantic import ValidationError
 
+from src.core.security import require_internal_key
 from src.message_assistant import canned_responses
 from src.message_assistant.conversation import (
     build_assistant_history_section,
@@ -333,6 +334,7 @@ class FakeService:
 def client_and_service() -> tuple[TestClient, FakeService]:
     app = FastAPI()
     app.include_router(router, prefix="/api/message-ai")
+    app.dependency_overrides[require_internal_key] = lambda: None
     fake = FakeService()
     app.dependency_overrides[get_message_assistant_service] = lambda: fake
     return TestClient(app), fake

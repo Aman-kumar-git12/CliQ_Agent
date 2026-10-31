@@ -42,7 +42,7 @@ def client(service: FakeService, settings_env) -> TestClient:
     app = FastAPI()
     app.include_router(router, prefix="/api")
     app.dependency_overrides[get_help_chat_service] = lambda: service
-    return TestClient(app)
+    return TestClient(app, headers={"X-Internal-Key": "secret"})
 
 
 FEEDBACK = {"messageId": "m1", "userHash": "u1", "rating": 1, "question": "q", "answer": "a"}
@@ -67,15 +67,22 @@ def test_kb_version(client: TestClient) -> None:
     assert client.get("/api/chat/kb-version").json() == {"kbVersion": "abc123"}
 
 
-def test_feedback_requires_the_internal_key(client: TestClient, service: FakeService) -> None:
-    assert client.post("/api/chat/feedback", json=FEEDBACK).status_code == 401
+def test_every_endpoint_requires_the_internal_key(client: TestClient, service: FakeService) -> None:
+    anonymous = TestClient(client.app)
+    assert anonymous.post("/api/chat", json={"message": "hi", "sessionId": "s1"}).status_code == 401
+    assert anonymous.post("/api/chat/stream", json={"message": "hi", "sessionId": "s1"}).status_code == 401
+    assert anonymous.get("/api/chat/kb-version").status_code == 401
+    body = {"sessionId": "s1", "question": "q", "answer": "a"}
+    assert anonymous.post("/api/chat/history/append", json=body).status_code == 401
+    assert anonymous.post("/api/chat/feedback", json=FEEDBACK).status_code == 401
     assert client.post("/api/chat/feedback", json=FEEDBACK, headers={"X-Internal-Key": "wrong"}).status_code == 401
-    ok = client.post("/api/chat/feedback", json=FEEDBACK, headers={"X-Internal-Key": "secret"})
+    assert service.history == []
+    ok = client.post("/api/chat/feedback", json=FEEDBACK)
     assert ok.json() == {"ok": True}
     assert service.feedback[0].messageId == "m1"
 
 
-def test_feedback_is_disabled_without_a_configured_key(client: TestClient, settings_env) -> None:
+def test_agent_refuses_calls_without_a_configured_key(client: TestClient, settings_env) -> None:
     settings_env(AGENT_INTERNAL_KEY="")
     assert client.post("/api/chat/feedback", json=FEEDBACK, headers={"X-Internal-Key": "x"}).status_code == 503
 

@@ -6,11 +6,12 @@ from typing import Any
 from fastapi import APIRouter, Depends
 from fastapi.responses import StreamingResponse
 
+from ..core.security import require_internal_key
 from .dependencies import get_message_assistant_service
 from .schemas import MessageAssistantRequest
 from .service import MessageAssistantService
 
-router = APIRouter()
+router = APIRouter(dependencies=[Depends(require_internal_key)])
 
 
 @router.post("/respond", response_model=None)

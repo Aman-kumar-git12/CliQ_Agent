@@ -30,8 +30,8 @@ CliQ has four AI features: AI reply suggestions and Ask AI inside chats, the Mag
 
 ## AI matching and AI search
 - Get Connections (**Explore**) ranks people for you by comparing expertise profiles with AI embeddings. See the Smart connections guide.
-- The suggestion lists **Discover People** (Home) and **Suggested Network** (Find People) are random people, not AI-matched.
-- On **Search** and Find People, searches of two or more words also use AI meaning-based matching ("people who know React and ML").
+- The suggestion lists **Discover People** (Home) and **Suggested Network** (Search) are random people, not AI-matched.
+- On **Search**, searches of two or more words also use AI meaning-based matching ("people who know React and ML").
 
 ## Limits
 - The Emoji Preference setting (**Balanced**, **More Emoji**, **No Emoji**) does not change the results yet; both emoji and no-emoji versions are always shown.

@@ -9,6 +9,7 @@ from fastapi.testclient import TestClient
 from langchain_core.prompt_values import PromptValue
 from langchain_core.runnables import RunnableLambda
 
+from src.core.security import require_internal_key
 from src.expertise.dependencies import get_expertise_service
 from src.expertise.drafting import build_minimal_fallback, validate_and_finalize
 from src.expertise.facts import (
@@ -155,6 +156,7 @@ class FakeExpertiseService:
 def _client(service: FakeExpertiseService) -> TestClient:
     app = FastAPI()
     app.include_router(router, prefix="/api/expertise")
+    app.dependency_overrides[require_internal_key] = lambda: None
     app.dependency_overrides[get_expertise_service] = lambda: service
     return TestClient(app)
 

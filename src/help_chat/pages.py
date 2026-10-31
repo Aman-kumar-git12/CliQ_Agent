@@ -6,8 +6,8 @@ import re
 # INTERNAL_LINK_ALLOWLIST in website_Dev/vite-project/src/utils/aiUtils.js — keep all three in sync.
 LINKABLE_PAGES = [
     ("/home", "Home", "home"),
-    ("/find/findpeople", "Find People", "find"),
-    ("/find/getconnection", "Get Connections", "find"),
+    ("/search", "Search", "find"),
+    ("/find/getconnection", "Explore (Get Connections)", "find"),
     ("/requests", "Requests", "requests"),
     ("/create/post", "Create Post", "create"),
     ("/edit-profile", "Edit Profile", "profile"),
@@ -21,7 +21,6 @@ LINKABLE_PAGES = [
 OTHER_PAGES = [
     ("/post/", "a single post's page", "create"),
     ("/notifications", "Notifications", None),
-    ("/search", "Search", "find"),
     ("/saved", "Saved Posts", None),
     ("/public-profile/", "another user's public profile", "profile"),
     ("/user/", "another user's public profile", "profile"),
