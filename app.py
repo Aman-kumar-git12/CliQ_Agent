@@ -1,13 +1,9 @@
-import os
-import uvicorn
-from dotenv import load_dotenv
+"""Starts the agent locally with auto-reload: python app.py"""
 
-# Load environment variables from .env file if present
-load_dotenv()
+import uvicorn
+
+from src.core.config import get_settings
 
 if __name__ == "__main__":
-    host = os.getenv("HOST", "0.0.0.0")
-    port = int(os.getenv("PORT", 8000))
-    
-    print(f"Starting CliQ AI Agent server on {host}:{port}...")
-    uvicorn.run("src.main:app", host=host, port=port, reload=True)
+    settings = get_settings()
+    uvicorn.run("src.main:app", host=settings.host, port=settings.port, reload=True)

@@ -1,0 +1,29 @@
+[project]
+name = "cliq-agent"
+version = "1.0.0"
+description = "CliQ AI agent: help chatbot, message assistant, expertise builder and smart matching"
+requires-python = ">=3.12"
+
+[tool.ruff]
+line-length = 120
+target-version = "py312"
+extend-exclude = [".venv"]
+
+[tool.ruff.lint]
+# E/W style, F pyflakes, I import order, B bugbear, UP modern syntax, SIM simplifications
+select = ["E", "W", "F", "I", "B", "UP", "SIM"]
+ignore = ["B008"]  # FastAPI's Depends()/Header() defaults are the intended pattern
+
+[tool.ruff.lint.per-file-ignores]
+# Prompt and user-message text: wrapping these lines would change what the model or user sees
+"**/prompts.py" = ["E501"]
+"src/help_chat/errors.py" = ["E501"]
+
+[tool.ruff.lint.isort]
+known-first-party = ["src"]
+
+[tool.pytest.ini_options]
+testpaths = ["tests/unit"]
+pythonpath = ["."]
+asyncio_mode = "auto"
+asyncio_default_fixture_loop_scope = "function"

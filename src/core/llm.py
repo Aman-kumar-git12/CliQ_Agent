@@ -1,52 +1,47 @@
-import os
+"""Groq chat models. Each is built on first use and then reused."""
 
-from dotenv import load_dotenv
+from functools import lru_cache
+
+from langchain_core.runnables import Runnable
 from langchain_groq import ChatGroq
 
-load_dotenv()
+from .config import get_settings
 
-classifier_model = os.getenv("MESSAGE_ASSISTANT_CLASSIFIER_MODEL", "llama-3.1-8b-instant")
-response_model = os.getenv("MESSAGE_ASSISTANT_RESPONSE_MODEL", "llama-3.1-8b-instant")
-fallback_response_model = os.getenv("MESSAGE_ASSISTANT_FALLBACK_MODEL", classifier_model)
 
-# Stable model for classification and question rewriting
-classifier_llm = ChatGroq(
-    model=classifier_model,
-    temperature=0,
-    streaming=True
-)
+def _groq(model: str, temperature: float, **kwargs) -> ChatGroq:
+    return ChatGroq(model=model, temperature=temperature, api_key=get_settings().groq_api_key, **kwargs)
 
-# Slightly creative model for final user-facing answers
-response_llm = ChatGroq(
-    model=response_model,
-    temperature=0.7,
-    streaming=True
-)
 
-# Lower-variance fallback for structured outputs and degraded-mode recovery
-fallback_response_llm = ChatGroq(
-    model=fallback_response_model,
-    temperature=0.2,
-    streaming=True
-)
+@lru_cache
+def get_classifier_llm() -> ChatGroq:
+    """Stable model for classification and question rewriting."""
+    return _groq(get_settings().classifier_model, 0, streaming=True)
 
-# Help chatbot router: rewrites + splits + classifies in one JSON call.
-# Groq JSON mode cannot stream, so streaming is disabled even inside astream_events.
-# max_retries=1: the SDK already retries once; more retries only delay the error when a limit is hit.
-help_router_llm = ChatGroq(
-    model=classifier_model,
-    temperature=0,
-    disable_streaming=True,
-    max_retries=1,
-).bind(response_format={"type": "json_object"})
 
-# Help chatbot answers: low temperature so the same question gets the same facts
-help_answer_llm = ChatGroq(
-    model=response_model,
-    temperature=0.2,
-    streaming=True,
-    max_retries=1,
-)
+@lru_cache
+def get_response_llm() -> ChatGroq:
+    """Slightly creative model for user-facing text (message assistant, expertise)."""
+    return _groq(get_settings().response_model, 0.7, streaming=True)
 
-# Backward-compatible export for any older code paths
-llm = response_llm
+
+@lru_cache
+def get_fallback_response_llm() -> ChatGroq:
+    """Lower-variance model for structured output and degraded-mode recovery."""
+    settings = get_settings()
+    return _groq(settings.fallback_model or settings.classifier_model, 0.2, streaming=True)
+
+
+# The help chat models fail fast (max_retries=1): with a daily limit, more retries only delay the error.
+
+
+@lru_cache
+def get_help_router_llm() -> Runnable:
+    """Help chat router: one JSON call. Groq JSON mode cannot stream, so streaming is disabled."""
+    llm = _groq(get_settings().classifier_model, 0, disable_streaming=True, max_retries=1)
+    return llm.bind(response_format={"type": "json_object"})
+
+
+@lru_cache
+def get_help_answer_llm() -> ChatGroq:
+    """Help chat answers: low temperature so the same question gets the same facts."""
+    return _groq(get_settings().response_model, 0.2, streaming=True, max_retries=1)

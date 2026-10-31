@@ -1,14 +1,15 @@
+# Packages the code imports directly; everything else is installed as their dependencies.
 fastapi
 uvicorn
+httpx
 pydantic
-langchain
+pydantic-settings
+groq
+langchain-core
 langchain-community
 langchain-groq
-langchain-classic
-langchain-core
-langchain-text-splitters
 langchain-mongodb
 pymongo
-fastembed
-python-dotenv
 certifi
+fastembed
+numpy

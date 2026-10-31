@@ -15,8 +15,8 @@ RUN pip install --no-cache-dir -r requirements.txt
 # Copy source code
 COPY . .
 
-# Set PYTHONPATH so src modules are importable
-ENV PYTHONPATH="/app/src"
+# Lets "src" be imported as a package
+ENV PYTHONPATH="/app"
 
 EXPOSE 8000
 

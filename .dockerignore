@@ -1,0 +1,12 @@
+# Keep secrets, local environments and caches out of the image (settings come from the host's env vars)
+.env
+.venv/
+venv/
+env/
+.git/
+**/__pycache__/
+*.pyc
+.pytest_cache/
+.ruff_cache/
+.DS_Store
+tests/
