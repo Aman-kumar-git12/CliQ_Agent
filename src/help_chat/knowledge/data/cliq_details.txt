@@ -31,4 +31,4 @@ CliQ is a professional networking web app. You build a profile and expertise, po
 - AI reply suggestions and Ask AI inside chats, the Magic Builder for your expertise profile, AI matching on Get Connections, and AI meaning-based people search. See the AI features guide.
 
 ## Limits
-- The help chat is available on the Home page only (round sparkles button, bottom right).
+- The help chat is on every page except Messages (round sparkles button, bottom right).

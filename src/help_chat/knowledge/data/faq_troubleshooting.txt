@@ -25,7 +25,7 @@ Quick answers to common problems and to questions about features CliQ does not h
 - Problem: upload failed in chat → Fix: try a smaller file and check your connection.
 
 ## Features not available yet
-- Stories, the Following and Trending feeds, drafts, scheduled or private posts, several images per post, polls.
+- Stories, drafts, scheduled or private posts, several images per post, polls.
 - Comment likes and comment editing.
 - Group chats, voice and video calls, read receipts, typing indicators, message search.
 - Removing a connection, a list of sent requests, blocking or reporting a person.

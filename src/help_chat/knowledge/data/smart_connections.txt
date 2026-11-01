@@ -47,11 +47,11 @@ Get Connections (called **Explore** in the sidebar) shows people recommended for
 - People you have a pending or accepted request with, and people you saved, are not shown again. People marked Not Preferred are hidden for 14 days.
 - People you ignored can appear again later, ranked lower.
 - The match score and confidence are not shown on the card.
-- **Reset Section** in History does not work yet; remove people one by one instead.
+- **Reset Section** (on Saved, Preferred and Not Preferred in History) empties that whole list after you confirm. It can't be undone.
 - Not available yet: filters (location, role) on Get Connections, undoing the last swipe.
 
 ## Common problems
 - Problem: "No more smart matches right now." → Fix: click **Refresh Matches**, and complete your expertise profile so more people match.
 - Problem: matches don't fit you → Fix: fill in your skills, interests and about you in Settings > **Edit Expertise**, and use **MARK PREFERRED** / **NOT PREFERRED** to teach it.
 - Problem: you swiped right by mistake → Fix: open **HISTORY** > **Show** on Interested and click **Remove Interest** to cancel the request.
-- Problem: "Failed to reset section" → Fix: Reset Section is not working yet; remove people individually.
+- Problem: "Failed to reset section" → Fix: check your connection and try again, or remove people one by one.

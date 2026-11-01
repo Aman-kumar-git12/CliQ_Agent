@@ -2,10 +2,13 @@
 Route: /home
 
 ## Summary
-Home is the main feed. It shows posts from other people in random order, with a quick post box at the top and, on wide screens, a sidebar with Discover People. The CliQ AI help chat is opened from the round button at the bottom right of Home.
+Home is the main feed, with a quick post box at the top and three tabs: **For You**, **Following** and **Trending**. On wide screens a sidebar shows trending hashtags and Discover People. The CliQ AI help chat is opened from the round button at the bottom right.
 
-## What the feed shows
-- Posts from other people, in random order. More load as you scroll; "✨ End of the universe ✨" means there are no more.
+## What the feed tabs show
+- **For You**: posts from other people, in random order. More load as you scroll; "✨ End of the universe ✨" means there are no more.
+- **Following**: the newest posts from your connections (people whose request you accepted or who accepted yours). Empty until you have connections who post.
+- **Trending**: posts from the last 30 days, most liked first.
+- Switching tabs keeps each tab's posts, so you don't lose your place.
 - Your own posts are not shown in your Home feed. They are on your profile (**Profile** > **Posts**).
 - Reposts and quotes by other people appear too.
 - On each post you can like, comment, repost, save and share (see the Posts and interactions guide).
@@ -18,21 +21,25 @@ Home is the main feed. It shows posts from other people in random order, with a 
 - Your new post won't appear in your own feed; check your profile.
 
 ## How to open the CliQ AI help chat
-1. On Home, click the round sparkles button at the bottom right.
+1. Click the round sparkles button at the bottom right. It is on every page except Messages.
 2. Type in **Ask me anything...** and send.
 - Use the menu icon for **Chat History**: **New Chat**, delete a chat, or **Clear All History**.
 
+## Trending hashtags
+- On wide screens the right sidebar's **Trending** list shows the most-used hashtags of the last 30 days, with how many posts use each.
+- Click a hashtag to see its posts in Search; **See all** opens hashtag search.
+
 ## Discover People
-- On wide screens the right sidebar's **Discover People** shows 3 random people you are not connected with. **Explore** opens Search, where you can find people.
+- On wide screens the right sidebar's **Discover People** shows 3 random people you are not connected with. Click a name to open their profile, or **Connect** to send a request (the button then shows **Requested**).
+- **Explore** next to the title opens Search, where you can find more people.
 - These are not AI-matched; AI matches are on **Explore** (Get Connections).
 
 ## Limits
-- Only the **For You** tab works. **Following** and **Trending** are not available yet.
-- The Stories bar at the top is a preview only; stories are not available yet.
-- The **Trending** list in the sidebar is sample content, and its **See all** link does not work yet.
-- The **Follow** button in Discover People and the sidebar footer links (About, Help, Privacy, Terms…) do not work yet.
+- Stories are not available.
+- **Following** only includes accepted connections, not people with a pending request.
 
 ## Common problems
 - Problem: "Failed to load feed" → Fix: refresh the page.
 - Problem: you posted but can't see your post on Home → Fix: your own posts are only on your profile.
-- Problem: you can't find the AI help chat → Fix: it is only on the Home page, bottom right.
+- Problem: you can't find the AI help chat → Fix: it is the round button at the bottom right of every page except Messages.
+- Problem: the **Following** tab is empty → Fix: it shows posts from your connections only; connect with people on Search or Explore.

@@ -36,7 +36,7 @@ CliQ has four AI features: AI reply suggestions and Ask AI inside chats, the Mag
 ## Limits
 - The Emoji Preference setting (**Balanced**, **More Emoji**, **No Emoji**) does not change the results yet; both emoji and no-emoji versions are always shown.
 - Magic Builder keeps at most 5 skills and a 50-character title, and uses "Remote" as location; edit these in the form afterwards.
-- The CliQ AI help chat cannot take actions for you, find specific people or posts, or read your account. It is only on the Home page (round sparkles button, bottom right).
+- The CliQ AI help chat cannot take actions for you, find specific people or posts, or read your account. It is the round sparkles button at the bottom right of every page except Messages.
 
 ## Common problems
 - Problem: "Reply Generator Unavailable" → Fix: click **Try Again** a moment later.

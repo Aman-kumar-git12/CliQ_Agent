@@ -36,5 +36,4 @@ Search is the one place to find people, posts and hashtags. With an empty search
 - Problem: "AI matching is unavailable right now. Showing keyword matches only." → Fix: results still work by keywords; try again later for AI matches.
 - Problem: no results → Fix: try a shorter query, a skill name, or the person's first name.
 - Problem: **Connect** shows again for someone who rejected you, and clicking it gives an error → Fix: a rejected request cannot be resent.
-- Problem: the **Follow** button in Home's Discover People does nothing → Fix: open the person's profile, or use **Connect** on Search instead.
 - Problem: an old link to Find People → Fix: it now opens Search automatically.
