@@ -4,7 +4,7 @@ import pytest
 from langchain_core.documents import Document
 
 from src.help_chat.feedback import FeedbackMemory
-from tests.unit.fakes import FakeCollection, FakeEmbeddings
+from tests.unit.fakes import FakeCollection, FakeEmbeddings, UnreachableCollection
 
 Q = "How do I create a post?"
 GOOD = "Click **New Post**, write text, click **Share Post**."
@@ -76,3 +76,30 @@ def test_rank_docs_lifts_liked_and_drops_misleading_chunks(memory: FeedbackMemor
     ranked = memory.rank_docs([_doc("Old search"), _doc("Neutral"), _doc("Search people")], memory.chunk_scores())
     assert [d.metadata["heading"] for d in ranked] == ["Search people", "Neutral"]
     assert memory.rank_docs([_doc("Old search")], memory.chunk_scores()) != []  # never drops everything
+
+
+# --- MongoDB outages and the kb-version endpoint --------------------------------------------------
+
+
+def test_kb_version_never_reads_the_feedback_collection(kb: dict) -> None:
+    # The backend asks for it before every first question; it must not wait for (or fail with) MongoDB
+    collection = UnreachableCollection()
+    memory = FeedbackMemory(collection, FakeEmbeddings(), lambda: kb["version"])  # index failure is not fatal
+    calls_after_start = collection.calls
+    kb["version"] = "v2"
+    memory._kb_checked_at = 0  # skip the 60-second cache
+    assert memory.current_kb_version() == "v2"
+    assert collection.calls == calls_after_start
+
+
+def test_lookup_keeps_the_cached_votes_while_mongodb_is_down(memory: FeedbackMemory) -> None:
+    memory.record("m1", "userA", 1, Q, GOOD, cacheable=True)
+    memory.record("m2", "userB", 1, Q, GOOD, cacheable=True)
+    assert memory.lookup(Q).approved["answer"] == GOOD
+
+    memory.collection = UnreachableCollection()
+    memory._loaded_at = 0  # force a reload, which now fails
+    assert memory.lookup(Q).approved["answer"] == GOOD
+    calls = memory.collection.calls
+    memory.lookup(Q)
+    assert memory.collection.calls == calls  # retried only after the cache period, not on every question

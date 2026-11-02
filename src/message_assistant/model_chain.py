@@ -41,7 +41,7 @@ def invoke_json_model(models: Sequence[NamedModel], system_prompt: str, user_pro
             return extract_json_payload(getattr(response, "content", "") or ""), model.source
         # Deliberately broad: any provider, network or parsing failure should just move on to the next model.
         except Exception as exc:
-            logger.warning("Message assistant model %s failed: %s", model.source, exc)
+            logger.warning("Message assistant model %s failed: %s", model.source, str(exc)[:200])
             last_error = exc
     raise LLMUnavailableError("No message assistant model produced a usable answer") from last_error
 
@@ -49,9 +49,10 @@ def invoke_json_model(models: Sequence[NamedModel], system_prompt: str, user_pro
 async def stream_with_fallback(
     models: Sequence[NamedModel], system_prompt: str, user_prompt: str, fallback_text: str
 ) -> AsyncIterator[str]:
-    """Streams text from the first model that produces any; yields `fallback_text` if none completes.
+    """Streams text from the first model that produces any; yields `fallback_text` if none produces text.
 
-    A model that fails mid-stream hands over to the next one, so partial output may precede the retry.
+    A model that fails before its first chunk hands over to the next one. One that fails mid-stream ends the
+    answer there: starting again with another model would repeat the text the user has already seen.
     """
     for model in models:
         streamed = False
@@ -65,5 +66,7 @@ async def stream_with_fallback(
                 return
         # Deliberately broad: any provider or network failure should just move on to the next model.
         except Exception as exc:
-            logger.warning("Message assistant model %s failed while streaming: %s", model.source, exc)
+            logger.warning("Message assistant model %s failed while streaming: %s", model.source, str(exc)[:200])
+            if streamed:
+                return
     yield fallback_text

@@ -14,10 +14,11 @@ class FakeCursor(list):
 
 
 class FakeCollection:
-    """Supports the handful of pymongo calls the feedback memory makes."""
+    """Supports the handful of pymongo calls the feedback memory and the chat history make."""
 
     def __init__(self) -> None:
         self.docs: list[dict] = []
+        self._next_id = 0
 
     def create_index(self, *args, **kwargs) -> None:
         pass
@@ -36,6 +37,35 @@ class FakeCollection:
 
     def delete_one(self, query: dict) -> None:
         self.docs = [d for d in self.docs if not all(d.get(k) == v for k, v in query.items())]
+
+    def insert_many(self, docs: list[dict]) -> None:
+        for doc in docs:
+            self._next_id += 1  # increasing, like ObjectIds from one client
+            self.docs.append({"_id": self._next_id, **doc})
+
+    def delete_many(self, query: dict) -> None:
+        ids = set(query["_id"]["$in"]) if "_id" in query else None
+        self.docs = [
+            d
+            for d in self.docs
+            if not (d["_id"] in ids if ids is not None else all(d.get(k) == v for k, v in query.items()))
+        ]
+
+
+class UnreachableCollection:
+    """Every call fails the way pymongo does when Atlas can't be reached."""
+
+    def __init__(self) -> None:
+        self.calls = 0
+
+    def __getattr__(self, name: str):
+        from pymongo.errors import ServerSelectionTimeoutError
+
+        def fail(*_args, **_kwargs):
+            self.calls += 1
+            raise ServerSelectionTimeoutError("no servers available")
+
+        return fail
 
 
 class FakeEmbeddings:

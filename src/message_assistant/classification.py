@@ -1,7 +1,10 @@
 """LLM classifiers for safety and routing, each with a rule-based fallback when the models fail."""
 
+import contextvars
 import logging
-from collections.abc import Sequence
+from collections.abc import Callable, Sequence
+from concurrent.futures import ThreadPoolExecutor
+from typing import TypeVar
 
 from . import prompts
 from .conversation import (
@@ -18,13 +21,43 @@ logger = logging.getLogger(__name__)
 
 ROUTING_MODES = frozenset({"contextual", "general"})
 HEURISTIC_SOURCE = "heuristic_fallback"
+# Each request runs at most one classifier next to the safety check; this bounds concurrent Groq calls
+CLASSIFIER_THREADS = 8
+
+T = TypeVar("T")
+
+
+def distinct_models(models: Sequence[NamedModel]) -> tuple[NamedModel, ...]:
+    """Drops a model that is the same Groq model as an earlier one: it shares its outage and rate limit."""
+    seen: set[str] = set()
+    distinct = []
+    for model in models:
+        name = getattr(model.llm, "model_name", None)
+        if name and name in seen:
+            continue
+        if name:
+            seen.add(name)
+        distinct.append(model)
+    return tuple(distinct)
 
 
 class ModeClassifier:
     """Asks the models how to handle a request; returns (mode, source) where source names who decided."""
 
     def __init__(self, models: Sequence[NamedModel]) -> None:
-        self._models = models
+        self._models = distinct_models(models)
+        self._pool = ThreadPoolExecutor(max_workers=CLASSIFIER_THREADS, thread_name_prefix="message-ai")
+
+    def classify_unless_blocked(self, request_text: str, classify: Callable[[], T]) -> T | None:
+        """Runs the safety check and a routing classifier at the same time (one Groq round trip of waiting
+        instead of two). Returns the classifier's result, or None when the request is blocked."""
+        if not join_request_parts(request_text):
+            return classify()  # nothing for the safety model to check
+        # copy_context so the worker's log lines keep the request id
+        future = self._pool.submit(contextvars.copy_context().run, classify)
+        if self.should_block(request_text):
+            return None
+        return future.result()
 
     def should_block(self, *parts: str) -> bool:
         """True when the keyword screen or the safety model flags the request."""

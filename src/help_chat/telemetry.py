@@ -7,6 +7,7 @@ import logging
 import time
 
 import groq
+from pymongo.errors import PyMongoError
 
 from .schemas import RoutedPart
 
@@ -20,6 +21,7 @@ ERROR_CODES: list[tuple[type[BaseException], str]] = [
     (groq.APIConnectionError, "llm_unreachable"),
     (groq.BadRequestError, "llm_bad_request"),
     (groq.APIError, "llm_error"),
+    (PyMongoError, "db_unavailable"),
 ]
 
 

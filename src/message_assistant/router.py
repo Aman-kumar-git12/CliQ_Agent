@@ -1,5 +1,6 @@
 """HTTP endpoints for AI reply suggestions and Ask AI answers (mounted at /api/message-ai)."""
 
+import logging
 from collections.abc import AsyncIterator
 from typing import Any
 
@@ -7,9 +8,12 @@ from fastapi import APIRouter, Depends
 from fastapi.responses import StreamingResponse
 
 from ..core.security import require_internal_key
+from . import canned_responses
 from .dependencies import get_message_assistant_service
 from .schemas import MessageAssistantRequest
 from .service import MessageAssistantService
+
+logger = logging.getLogger(__name__)
 
 router = APIRouter(dependencies=[Depends(require_internal_key)])
 
@@ -41,6 +45,16 @@ def message_assistant(
     )
 
 
+async def _ended_cleanly(chunks: AsyncIterator[str], question: str) -> AsyncIterator[str]:
+    """Stream boundary: the status line is already sent, so a failure must end the text, not the connection."""
+    try:
+        async for chunk in chunks:
+            yield chunk
+    except Exception:
+        logger.exception("POST /respond/stream failed")
+        yield canned_responses.fallback_answer(question)["answer"]
+
+
 @router.post("/respond/stream")
 async def message_assistant_stream(
     request: MessageAssistantRequest,
@@ -55,4 +69,9 @@ async def message_assistant_stream(
         older_context=request.older_context,
         tone=request.tone,
     )
-    return StreamingResponse(chunks, media_type="text/plain")
+    return StreamingResponse(
+        _ended_cleanly(chunks, request.question),
+        media_type="text/plain",
+        # Proxies must pass each chunk on at once instead of buffering the answer
+        headers={"Cache-Control": "no-cache", "X-Accel-Buffering": "no"},
+    )

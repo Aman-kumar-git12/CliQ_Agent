@@ -1,5 +1,7 @@
 """Smart connections ranking and semantic people search over candidate profiles sent by the backend."""
 
+import asyncio
+from collections import OrderedDict
 from threading import Lock
 from typing import Any
 
@@ -14,10 +16,14 @@ from .profile_features import (
 from .ranking import RetrievedCandidate, UserContext, rank_candidate
 from .scoring import MAX_SCORE, RankingWeights, clamp, profile_quality_label, profile_quality_score, retrieval_score
 from .tokens import normalize_text, tokenize
+from .vector_store import ProfileVectorStore
 
 DEFAULT_TOP_K = 60
 DEFAULT_RETRIEVAL_K = 180
 DEFAULT_SEARCH_TOP_K = 20
+# Bundles (features + vector) of the most recently used profiles. Above this the least recently used are
+# dropped; their vectors stay in the vector store, so dropping one only costs rebuilding its features.
+MAX_CACHED_PROFILES = 3000
 # How the base, history-positive and history-negative similarities blend into one vector score
 BASE_VECTOR_WEIGHT = 0.64
 POSITIVE_VECTOR_WEIGHT = 0.28
@@ -29,13 +35,20 @@ type Bundle = dict[str, Any]
 class MatchingService:
     """Ranks candidates for a user and searches people by free text.
 
-    Candidate embeddings are cached per profile id and reused until the profile content changes.
+    Candidate embeddings are cached per profile id and reused until the profile content changes. With a
+    vector store they are also saved in MongoDB, so after a restart they are read back instead of re-embedded.
+    Embedding and scoring are CPU-bound, so each public method runs its work in a worker thread:
+    a long precompute or ranking must not block the event loop (health checks, other requests).
+    The caches are lock-protected and the ONNX model is safe to call from several threads.
     """
 
-    def __init__(self, embedder: TextEmbedder, weights: RankingWeights) -> None:
+    def __init__(
+        self, embedder: TextEmbedder, weights: RankingWeights, vector_store: ProfileVectorStore | None = None
+    ) -> None:
         self._embedder = embedder
         self._weights = weights
-        self._profile_cache: dict[str, Bundle] = {}
+        self._vector_store = vector_store
+        self._profile_cache: OrderedDict[str, Bundle] = OrderedDict()
         self._cache_lock = Lock()
 
     def _is_discoverable(self, profile: dict[str, Any]) -> bool:
@@ -47,19 +60,35 @@ class MatchingService:
         if profile_id:
             with self._cache_lock:
                 cached_bundle = self._profile_cache.get(profile_id)
-            if cached_bundle and cached_bundle.get("signature") == signature:
-                return cached_bundle
+                if cached_bundle and cached_bundle.get("signature") == signature:
+                    self._profile_cache.move_to_end(profile_id)
+                    return cached_bundle
 
         features = build_profile_features(profile)
-        vector = self._embedder.embed_text(features["text"]) if features["text"] else []
+        vector = self._stored_vector(profile_id, signature)
+        if vector is None:
+            vector = self._embedder.embed_text(features["text"]) if features["text"] else []
+            if profile_id and self._vector_store:
+                self._vector_store.save(profile_id, signature, vector)
         bundle = {"signature": signature, "features": features, "vector": vector}
         if profile_id:
             with self._cache_lock:
                 self._profile_cache[profile_id] = bundle
+                self._profile_cache.move_to_end(profile_id)
+                if len(self._profile_cache) > MAX_CACHED_PROFILES:
+                    self._profile_cache.popitem(last=False)
         return bundle
+
+    def _stored_vector(self, profile_id: str | None, signature: str) -> list[float] | None:
+        if not (profile_id and self._vector_store):
+            return None
+        return self._vector_store.get(profile_id, signature)
 
     async def precompute_profile(self, profile_id: str, profile: dict[str, Any] | None) -> dict[str, Any]:
         """Warms the embedding cache for one profile and reports its quality."""
+        return await asyncio.to_thread(self._precompute_profile, profile_id, profile)
+
+    def _precompute_profile(self, profile_id: str, profile: dict[str, Any] | None) -> dict[str, Any]:
         if not profile_id:
             raise ValueError("profile_id is required")
         bundle = self._get_profile_bundle(profile or {}, profile_id=profile_id)
@@ -85,6 +114,11 @@ class MatchingService:
 
         Profile vectors come from the same cache as rank_candidates, so a warm cache only embeds the query.
         """
+        return await asyncio.to_thread(self._semantic_search, query, candidates, top_k, min_score)
+
+    def _semantic_search(
+        self, query: str, candidates: list[dict[str, Any]], top_k: int, min_score: float | None
+    ) -> list[dict[str, Any]]:
         query = normalize_text(query)
         if not query or not candidates:
             return []
@@ -124,6 +158,18 @@ class MatchingService:
         retrieval_k: int = DEFAULT_RETRIEVAL_K,
     ) -> list[dict[str, Any]]:
         """Recommends connections: a cheap retrieval pass shortlists, then a fuller score orders the shortlist."""
+        return await asyncio.to_thread(
+            self._rank_candidates, user_profile, history_profile, candidates, top_k, retrieval_k
+        )
+
+    def _rank_candidates(
+        self,
+        user_profile: dict[str, Any],
+        history_profile: dict[str, Any] | None,
+        candidates: list[dict[str, Any]],
+        top_k: int,
+        retrieval_k: int,
+    ) -> list[dict[str, Any]]:
         if not candidates:
             return []
         user_bundle = self._get_profile_bundle(user_profile or {})

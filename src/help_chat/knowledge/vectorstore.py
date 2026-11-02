@@ -8,7 +8,7 @@ from langchain_core.documents import Document
 from langchain_core.embeddings import Embeddings
 from langchain_mongodb import MongoDBAtlasVectorSearch
 from pymongo.collection import Collection
-from pymongo.errors import PyMongoError
+from pymongo.errors import ConnectionFailure, PyMongoError
 
 from ...core.embeddings import EMBEDDING_DIMENSIONS
 
@@ -43,23 +43,25 @@ class KnowledgeStore:
         )
 
     def similarity_search(self, query: str, k: int = 4, pre_filter: dict | None = None) -> list[Document]:
-        """Atlas Vector Search, falling back to an in-memory scan when the index is missing or not ready."""
+        """Atlas Vector Search, falling back to an in-memory scan when the index is missing or not ready.
+
+        Raises PyMongoError when the database can't be reached. Returning no chunks instead would make the
+        model answer "I don't know", and that answer would be marked cacheable and served from the cache.
+        """
+        query_vector = self.embeddings.embed_query(query)
         try:
-            results = self.vector_search.similarity_search(query, k=k, pre_filter=pre_filter)
+            results = self.vector_search.similarity_search_by_vector(query_vector, k=k, pre_filter=pre_filter)
             if results:
                 return results
+        except ConnectionFailure:
+            raise  # the fallback reads the same database, so it would only wait for the same timeout
         except PyMongoError as exc:
             logger.warning("Atlas Vector Search failed: %s", exc)
 
         logger.warning("Using local in-memory fallback search (is the '%s' index READY?)", INDEX_NAME)
-        try:
-            return self._local_search(query, k, pre_filter)
-        except PyMongoError as exc:
-            logger.error("Local fallback search failed: %s", exc)
-            return []
+        return self._local_search(query_vector, k, pre_filter)
 
-    def _local_search(self, query: str, k: int, pre_filter: dict | None) -> list[Document]:
-        query_vector = self.embeddings.embed_query(query)
+    def _local_search(self, query_vector: list[float], k: int, pre_filter: dict | None) -> list[Document]:
         docs = [d for d in self.collection.find(pre_filter or {}).limit(FALLBACK_SCAN_LIMIT) if "embedding" in d]
         # Dot product equals cosine similarity because the stored vectors are normalized
         docs.sort(key=lambda d: np.dot(query_vector, d["embedding"]), reverse=True)

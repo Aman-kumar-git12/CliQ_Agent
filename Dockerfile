@@ -18,6 +18,9 @@ COPY . .
 # Lets "src" be imported as a package
 ENV PYTHONPATH="/app"
 
+# Bake the embedding model into the image, so a cold start reads it from disk instead of downloading it
+RUN python scripts/download_model.py
+
 EXPOSE 8000
 
 CMD ["uvicorn", "src.main:app", "--host", "0.0.0.0", "--port", "8000"]

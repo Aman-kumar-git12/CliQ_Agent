@@ -1,5 +1,6 @@
 """Learns from 👍/👎 on help chat answers without retraining the model (no extra LLM calls)."""
 
+import logging
 import threading
 import time
 from collections.abc import Callable
@@ -10,6 +11,9 @@ import numpy as np
 from langchain_core.documents import Document
 from langchain_core.embeddings import Embeddings
 from pymongo.collection import Collection
+from pymongo.errors import PyMongoError
+
+logger = logging.getLogger(__name__)
 
 COLLECTION_NAME = "chat_feedback"
 # Chunk-level votes needed before retrieval order is changed
@@ -63,7 +67,11 @@ class FeedbackMemory:
         min_approvals: int = 2,
     ) -> None:
         self.collection = collection
-        self.collection.create_index("messageId", unique=True)
+        try:
+            self.collection.create_index("messageId", unique=True)
+        except PyMongoError as exc:
+            # Startup must not fail (or hang) because Atlas is briefly unreachable; the index usually exists
+            logger.warning("Could not ensure the feedback index: %s", exc)
         self.embeddings = embeddings
         self.kb_fingerprint = kb_fingerprint
         # A new question reuses an earlier rated answer only when it means the same thing
@@ -71,6 +79,7 @@ class FeedbackMemory:
         # Distinct users who must 👍 an answer (with no 👎) before it is served to everyone
         self.min_approvals = max(1, min_approvals)
         self.kb_version = kb_fingerprint()
+        self._kb_checked_at = time.monotonic()
         self._lock = threading.Lock()
         self._records: list[dict] = []
         self._loaded_at = 0.0
@@ -113,21 +122,37 @@ class FeedbackMemory:
     # ---------- reads ----------
 
     def current_kb_version(self) -> str:
-        """The knowledge base fingerprint, re-read at most every CACHE_SECONDS (docs can change without a restart)."""
-        self._current_records()
-        return self.kb_version
+        """The knowledge base fingerprint, re-read at most every CACHE_SECONDS (docs can change without a restart).
+
+        The backend asks for it before every first question, so it only hashes the files: it must not wait
+        for (or fail with) the feedback records in MongoDB.
+        """
+        with self._lock:
+            if time.monotonic() - self._kb_checked_at > CACHE_SECONDS:
+                self._refresh_kb_version()
+            return self.kb_version
+
+    def _refresh_kb_version(self) -> None:
+        """Caller holds self._lock."""
+        self.kb_version, self._kb_checked_at = self.kb_fingerprint(), time.monotonic()
 
     def _current_records(self) -> list[dict]:
         with self._lock:
             if time.monotonic() - self._loaded_at > CACHE_SECONDS:
-                self.kb_version = self.kb_fingerprint()
-                records = list(
-                    self.collection.find({"kbVersion": self.kb_version}, {"_id": 0})
-                    .sort("updatedAt", -1)
-                    .limit(MAX_RECORDS)
-                )
-                for r in records:
-                    r["embedding"] = np.asarray(r["embedding"], dtype=np.float32)
+                self._refresh_kb_version()
+                try:
+                    records = list(
+                        self.collection.find({"kbVersion": self.kb_version}, {"_id": 0})
+                        .sort("updatedAt", -1)
+                        .limit(MAX_RECORDS)
+                    )
+                except PyMongoError as exc:
+                    # Feedback only improves answers: keep the last records and try again after CACHE_SECONDS
+                    logger.warning("Could not load chat feedback, using the cached records: %s", exc)
+                    records = self._records
+                else:
+                    for r in records:
+                        r["embedding"] = np.asarray(r["embedding"], dtype=np.float32)
                 self._records, self._loaded_at = records, time.monotonic()
             return self._records
 

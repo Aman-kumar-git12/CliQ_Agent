@@ -36,5 +36,6 @@ def ingest() -> bool:
 
 
 if __name__ == "__main__":
-    setup_logging(get_settings().log_level)
+    settings = get_settings()
+    setup_logging(settings.log_level, settings.log_format)
     sys.exit(0 if ingest() else 1)

@@ -1,11 +1,14 @@
 """Step 3 of a help chat turn: streams one grounded answer that covers every part."""
 
+import logging
 from collections.abc import AsyncIterator
 
+import groq
 from langchain_core.documents import Document
 from langchain_core.output_parsers import StrOutputParser
 from langchain_core.runnables import Runnable
 
+from .llm_errors import LLM_ATTEMPTS, is_quick_retry
 from .prompts import (
     ANSWER_STYLES,
     DIRECT_INSTRUCTIONS,
@@ -16,6 +19,8 @@ from .prompts import (
 )
 from .routing import DIRECT_INTENTS
 from .schemas import RoutedPart
+
+logger = logging.getLogger(__name__)
 
 
 class AnswerWriter:
@@ -47,8 +52,20 @@ class AnswerWriter:
         else:
             chain, inputs = self.rag_chain, {**inputs, "parts_block": build_parts_block(parts, docs_by_part)}
 
-        async for token in chain.astream(inputs):
-            yield token
+        attempt = 1
+        while True:
+            streamed = False
+            try:
+                async for token in chain.astream(inputs):
+                    streamed = True
+                    yield token
+                return
+            except groq.APIError as exc:
+                # Retried only before the first token: a restart mid-answer would repeat text the user has seen
+                if streamed or attempt >= LLM_ATTEMPTS or not is_quick_retry(exc):
+                    raise
+                attempt += 1
+                logger.warning("Answer stream failed before its first token, retrying once: %s", str(exc)[:200])
 
 
 def build_parts_block(parts: list[RoutedPart], docs_by_part: list[list[Document]]) -> str:

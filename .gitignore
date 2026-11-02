@@ -9,6 +9,8 @@ env/
 venv/
 .pytest_cache/
 .ruff_cache/
+# Embedding model downloaded by scripts/download_model.py
+.cache/
 
 # Build output
 build/

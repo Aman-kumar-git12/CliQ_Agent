@@ -4,8 +4,9 @@ import json
 import logging
 from collections.abc import AsyncIterator
 
-from fastapi import APIRouter, Depends
+from fastapi import APIRouter, Depends, HTTPException
 from fastapi.responses import StreamingResponse
+from pymongo.errors import PyMongoError
 
 from ..core.security import require_internal_key
 from .dependencies import get_help_chat_service
@@ -66,11 +67,20 @@ async def kb_version(service: HelpChatService = Depends(get_help_chat_service)) 
     return KbVersionResponse(kbVersion=await service.kb_version())
 
 
+def _database_unavailable(exc: PyMongoError) -> HTTPException:
+    # 503, not 500: the request was fine and can be sent again once MongoDB is reachable
+    logger.warning("Database unavailable: %s", exc)
+    return HTTPException(status_code=503, detail="Database unavailable, try again later")
+
+
 @router.post("/feedback", response_model=OkResponse)
 async def chat_feedback(
     request: FeedbackRequest, service: HelpChatService = Depends(get_help_chat_service)
 ) -> OkResponse:
-    await service.record_feedback(request)
+    try:
+        await service.record_feedback(request)
+    except PyMongoError as exc:
+        raise _database_unavailable(exc) from exc
     return OkResponse()
 
 
@@ -78,5 +88,8 @@ async def chat_feedback(
 async def append_history(
     request: HistoryAppendRequest, service: HelpChatService = Depends(get_help_chat_service)
 ) -> OkResponse:
-    await service.append_history(request.sessionId, request.question, request.answer)
+    try:
+        await service.append_history(request.sessionId, request.question, request.answer)
+    except PyMongoError as exc:
+        raise _database_unavailable(exc) from exc
     return OkResponse()

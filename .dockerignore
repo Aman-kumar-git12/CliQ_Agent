@@ -8,5 +8,8 @@ env/
 *.pyc
 .pytest_cache/
 .ruff_cache/
+# A local model download; the image downloads its own copy at build time
+.cache/
 .DS_Store
 tests/
+.github/

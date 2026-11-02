@@ -3,6 +3,7 @@
 import pytest
 from fastapi import FastAPI
 from fastapi.testclient import TestClient
+from pymongo.errors import ServerSelectionTimeoutError
 
 from src.help_chat.dependencies import get_help_chat_service
 from src.help_chat.router import router
@@ -91,3 +92,33 @@ def test_history_append(client: TestClient, service: FakeService) -> None:
     body = {"sessionId": "s1", "question": "q", "answer": "a"}
     assert client.post("/api/chat/history/append", json=body).json() == {"ok": True}
     assert service.history == [("s1", "q", "a")]
+
+
+def test_rejects_empty_messages_and_oversized_ids(client: TestClient) -> None:
+    assert client.post("/api/chat", json={"message": "", "sessionId": "s1"}).status_code == 422
+    assert client.post("/api/chat/stream", json={"message": "hi", "sessionId": "s" * 129}).status_code == 422
+    body = {"sessionId": "s1", "question": "q", "answer": "a" * 8001}
+    assert client.post("/api/chat/history/append", json=body).status_code == 422
+
+
+def test_database_outage_is_a_503_not_a_500(client: TestClient, service: FakeService) -> None:
+    async def unreachable(*_args: object) -> None:
+        raise ServerSelectionTimeoutError("no servers")
+
+    service.record_feedback = unreachable
+    service.append_history = unreachable
+    assert client.post("/api/chat/feedback", json=FEEDBACK).status_code == 503
+    body = {"sessionId": "s1", "question": "q", "answer": "a"}
+    assert client.post("/api/chat/history/append", json=body).status_code == 503
+
+
+def test_a_broken_stream_still_ends_with_error_and_done(client: TestClient, service: FakeService) -> None:
+    async def broken(_request: object):
+        yield "token", {"text": "Half"}
+        raise RuntimeError("bug")
+
+    service.stream = broken
+    response = client.post("/api/chat/stream", json={"message": "hi", "sessionId": "s1"})
+    assert response.status_code == 200
+    assert 'event: error\ndata: {"code": "internal_error"}' in response.text
+    assert response.text.rstrip().endswith('event: done\ndata: {"cacheable": false}')

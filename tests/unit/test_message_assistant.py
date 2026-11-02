@@ -1,6 +1,7 @@
 """Unit tests for the message assistant's deterministic logic, service fallbacks and HTTP routes."""
 
 import json
+import threading
 from collections.abc import AsyncIterator, Callable
 from typing import Any
 
@@ -296,6 +297,21 @@ async def test_stream_answer_streams_then_falls_back() -> None:
     assert chunks == [canned_responses.fallback_answer("what did they ask")["answer"]]
 
 
+async def test_stream_answer_runs_blocking_classifiers_off_the_event_loop() -> None:
+    classifier_threads: list[int] = []
+
+    def responder(system: str, _user: str) -> str:
+        if "Do not return JSON" in system:
+            return "ok"
+        classifier_threads.append(threading.get_ident())
+        return '{"allow": true, "mode": "contextual"}'
+
+    service, _ = _service(responder)
+    assert await _collect(service.stream_answer(conversation=CHAT, question="what did they ask")) == ["ok"]
+    assert classifier_threads
+    assert threading.get_ident() not in classifier_threads
+
+
 # --- Schemas ---------------------------------------------------------------------------------
 
 
@@ -372,3 +388,126 @@ def test_respond_rejects_invalid_body(client_and_service: tuple[TestClient, Fake
     client, _ = client_and_service
     response = client.post("/api/message-ai/respond", json={"max_suggestions": "lots"})
     assert response.status_code == 422
+
+
+# --- Fewer, faster LLM calls ---------------------------------------------------------------------
+
+SAFETY = "safety classifier"
+
+
+def _calls(llm: FakeLLM, marker: str) -> int:
+    return sum(marker in system for system in llm.calls)
+
+
+def test_a_greeting_needs_no_model_at_all() -> None:
+    service, llms = _service(_fail)
+    assert service.answer_about_conversation(question="hi")["mode"] == "assistant_greeting"
+    assert all(not llm.calls for llm in llms)
+
+
+def test_classifiers_never_use_the_large_response_model() -> None:
+    def responder(system: str, _user: str) -> str:
+        if SAFETY in system:
+            return '{"allow": true}'
+        if "You classify" in system:
+            return '{"mode": "contextual"}'
+        return json.dumps({"reply_suggestions": ["See you there"], "answer": "They asked about coffee"})
+
+    classifier, response, fallback = FakeLLM(responder), FakeLLM(responder), FakeLLM(responder)
+    service = MessageAssistantService(classifier_llm=classifier, response_llm=response, fallback_llm=fallback)
+    service.generate_response(conversation=CHAT, draft="sounds fun")
+    service.answer_about_conversation(conversation=CHAT, question="what did they ask")
+    assert _calls(response, SAFETY) == 0 and _calls(response, "You classify") == 0
+    assert len(response.calls) == 2  # only the two generations
+    assert _calls(classifier, SAFETY) == 2 and _calls(classifier, "You classify") == 2
+
+
+def test_general_help_asks_the_safety_model_once() -> None:
+    def responder(system: str, _user: str) -> str:
+        if SAFETY in system:
+            return '{"allow": true}'
+        if "You classify" in system:
+            return '{"mode": "general"}'
+        return json.dumps({"answer": "Keep it light", "reply_suggestions": ["Hey!"]})
+
+    service, llms = _service(responder)
+    assert service.answer_about_conversation(question="give me flirty openers")["answer"] == "Keep it light"
+    assert sum(_calls(llm, SAFETY) for llm in llms) == 1
+    service.generate_response(conversation=[], draft="hey there")
+    assert sum(_calls(llm, SAFETY) for llm in llms) == 2
+
+
+def test_safety_and_routing_classifiers_run_at_the_same_time() -> None:
+    # Each classifier waits for the other at the barrier: run one after the other, both would time out
+    barrier = threading.Barrier(2, timeout=5)
+
+    def responder(system: str, _user: str) -> str:
+        if SAFETY in system:
+            barrier.wait()
+            return '{"allow": true}'
+        if "You classify" in system:
+            barrier.wait()
+            return '{"mode": "contextual"}'
+        return json.dumps({"answer": "They asked about coffee"})
+
+    service, _ = _service(responder)
+    result = service.answer_about_conversation(conversation=CHAT, question="what did they ask")
+    assert result["routing_source"] == "classifier_llm"  # the model answered, not the heuristic fallback
+
+
+def test_a_blocked_request_is_refused_even_though_routing_ran() -> None:
+    def responder(system: str, _user: str) -> str:
+        if SAFETY in system:
+            return '{"allow": false}'
+        return '{"mode": "contextual"}'
+
+    service, llms = _service(responder)
+    assert service.answer_about_conversation(question="write something to scare them")["mode"] == "safety_block"
+    assert service.generate_response(conversation=CHAT, draft="scare them")["error"] == "safety_block"
+    assert all("Do not return JSON" not in s for llm in llms for s in llm.calls)
+
+
+def test_the_same_groq_model_is_not_asked_twice_for_a_classification() -> None:
+    class NamedFakeLLM(FakeLLM):
+        model_name = "openai/gpt-oss-20b"
+
+    classifier, fallback = NamedFakeLLM(_fail), NamedFakeLLM(_fail)
+    service = MessageAssistantService(classifier_llm=classifier, response_llm=FakeLLM(_fail), fallback_llm=fallback)
+    service.answer_about_conversation(conversation=CHAT, question="what did they ask")
+    assert _calls(classifier, SAFETY) == 1 and _calls(fallback, SAFETY) == 0
+
+
+async def test_a_mid_stream_failure_does_not_repeat_the_answer() -> None:
+    def responder(system: str, _user: str) -> str:
+        if "Do not return JSON" in system:
+            return "Hel|RAISE"
+        return '{"allow": true, "mode": "contextual"}'
+
+    service, _ = _service(responder)
+    assert await _collect(service.stream_answer(conversation=CHAT, question="what did they ask")) == ["Hel"]
+
+
+def test_stream_route_ends_with_text_when_the_service_breaks() -> None:
+    class BrokenService(FakeService):
+        async def stream_answer(self, **kwargs: Any) -> AsyncIterator[str]:
+            yield "a"
+            raise RuntimeError("bug")
+
+    app = FastAPI()
+    app.include_router(router, prefix="/api/message-ai")
+    app.dependency_overrides[require_internal_key] = lambda: None
+    app.dependency_overrides[get_message_assistant_service] = BrokenService
+    response = TestClient(app).post("/api/message-ai/respond/stream", json={"question": "q"})
+    assert response.status_code == 200
+    assert response.text == "a" + canned_responses.fallback_answer("q")["answer"]
+    assert response.headers["cache-control"] == "no-cache"
+
+
+def test_request_limits() -> None:
+    long_message = MessageAssistantRequest(conversation=[{"role": "other", "text": "x" * 10_000}])
+    assert len(long_message.conversation[0].text) == 4000  # shortened, not rejected
+    for bad in ({"max_suggestions": 0}, {"max_suggestions": 50}, {"question": "x" * 4001}):
+        with pytest.raises(ValidationError):
+            MessageAssistantRequest(**bad)
+    with pytest.raises(ValidationError):
+        MessageAssistantRequest(conversation=[{"role": "me"}] * 101)

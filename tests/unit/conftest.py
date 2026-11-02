@@ -6,6 +6,8 @@ import pytest
 
 # Settings require a database URL; unit tests never connect to it
 os.environ.setdefault("DATABASE_URL", "mongodb://localhost:27017")
+# Env vars beat .env, so a developer's Sentry DSN never receives test errors
+os.environ["SENTRY_DSN"] = ""
 
 
 @pytest.fixture

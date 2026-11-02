@@ -1,6 +1,9 @@
 """Tests for matching: tokens, features, scoring, the service (hash embedder, offline) and the routes."""
 
+import asyncio
+import hashlib
 import sys
+import threading
 from typing import Any
 
 import pytest
@@ -154,6 +157,33 @@ async def test_precompute(service: MatchingService) -> None:
         await service.precompute_profile("", {})
 
 
+class BlockingBackend:
+    """An embedding model whose inference blocks until released, like a long ONNX call."""
+
+    def __init__(self) -> None:
+        self.started = threading.Event()
+        self.release = threading.Event()
+        self.thread_ids: list[int] = []
+
+    def embed_documents(self, texts: list[str]) -> list[list[float]]:
+        self.thread_ids.append(threading.get_ident())
+        self.started.set()
+        self.release.wait(timeout=2)
+        return [[1.0, 0.0] for _ in texts]
+
+
+async def test_precompute_runs_off_the_event_loop() -> None:
+    backend = BlockingBackend()
+    service = MatchingService(TextEmbedder(backend), RankingWeights())
+    task = asyncio.create_task(service.precompute_profile("p1", USER))
+    # Run inline, the embedding would block the loop until the release timeout and the task would be done here
+    await asyncio.to_thread(backend.started.wait, 2)
+    assert not task.done()
+    backend.release.set()
+    assert (await task)["profileId"] == "p1"
+    assert backend.thread_ids and threading.get_ident() not in backend.thread_ids
+
+
 class FakeMatchingService:
     def __init__(self, error: Exception | None = None) -> None:
         self.error = error
@@ -225,10 +255,163 @@ def test_routes_use_app_state_service() -> None:
     app.include_router(router, prefix="/api/match")
     app.dependency_overrides[require_internal_key] = lambda: None
     app.state.matching = MatchingService(TextEmbedder(None), RankingWeights())
-    response = TestClient(app).post("/api/match/precompute", json={"profileId": "", "profile": {}})
-    assert response.status_code == 500
-    assert response.json() == {"detail": "profile_id is required"}
+    client = TestClient(app)
+    response = client.post("/api/match/precompute", json={"profileId": "p1", "profile": {"skills": ["React"]}})
+    assert response.status_code == 200 and response.json()["profileId"] == "p1"
+    # An empty id is the caller's mistake: 422, not a server error
+    assert client.post("/api/match/precompute", json={"profileId": "", "profile": {}}).status_code == 422
 
 
 def test_match_route_validates_body() -> None:
     assert _client(FakeMatchingService()).post("/api/match/match", json={"candidates": []}).status_code == 422
+
+
+class FakeCollection:
+    """Just enough of a pymongo collection for ProfileVectorStore."""
+
+    def __init__(self) -> None:
+        self.docs: dict[str, dict] = {}
+
+    def find(self, query: dict, _projection: dict) -> list[dict]:
+        return [{"_id": key, **doc} for key, doc in self.docs.items() if doc["model"] == query["model"]]
+
+    def update_one(self, query: dict, update: dict, upsert: bool = False) -> None:
+        self.docs[query["_id"]] = {**self.docs.get(query["_id"], {}), **update["$set"]}
+
+
+class CountingEmbedder(TextEmbedder):
+    def __init__(self) -> None:
+        super().__init__(None)
+        self.calls = 0
+
+    def embed_text(self, text: str) -> list[float]:
+        self.calls += 1
+        return super().embed_text(text)
+
+
+PROFILE = {"skills": ["React", "Node"], "description": "Full stack developer building web apps"}
+
+
+def test_stored_embeddings_survive_a_restart() -> None:
+    from src.matching.vector_store import ProfileVectorStore
+
+    collection = FakeCollection()
+    first = CountingEmbedder()
+    MatchingService(first, RankingWeights(), ProfileVectorStore(collection, "hash-96"))._get_profile_bundle(
+        PROFILE, profile_id="u1"
+    )
+    assert first.calls == 1
+    assert len(bytes(collection.docs["u1"]["vector"])) == 4 * 96  # packed float32
+
+    # A new process (restart) reads the vector back instead of embedding again
+    second = CountingEmbedder()
+    bundle = MatchingService(second, RankingWeights(), ProfileVectorStore(collection, "hash-96"))._get_profile_bundle(
+        PROFILE, profile_id="u1"
+    )
+    assert second.calls == 0
+    assert bundle["vector"] == pytest.approx(first.embed_text(bundle["features"]["text"]), abs=1e-6)
+
+
+def test_stored_embeddings_are_redone_when_the_profile_or_model_changes() -> None:
+    from src.matching.vector_store import ProfileVectorStore
+
+    collection = FakeCollection()
+    MatchingService(
+        CountingEmbedder(), RankingWeights(), ProfileVectorStore(collection, "hash-96")
+    )._get_profile_bundle(PROFILE, profile_id="u1")
+
+    edited = CountingEmbedder()
+    MatchingService(edited, RankingWeights(), ProfileVectorStore(collection, "hash-96"))._get_profile_bundle(
+        {**PROFILE, "skills": ["Python"]}, profile_id="u1"
+    )
+    assert edited.calls == 1
+
+    other_model = CountingEmbedder()
+    MatchingService(other_model, RankingWeights(), ProfileVectorStore(collection, "bge"))._get_profile_bundle(
+        PROFILE, profile_id="u1"
+    )
+    assert other_model.calls == 1
+
+
+def test_matching_still_works_when_the_database_is_down() -> None:
+    from src.matching.vector_store import ProfileVectorStore
+
+    class BrokenCollection:
+        def find(self, *_args: object) -> list:
+            raise ConnectionError("database unreachable")
+
+        def update_one(self, *_args: object, **_kwargs: object) -> None:
+            raise ConnectionError("database unreachable")
+
+    embedder = CountingEmbedder()
+    service = MatchingService(embedder, RankingWeights(), ProfileVectorStore(BrokenCollection(), "hash-96"))
+    assert service._get_profile_bundle(PROFILE, profile_id="u1")["vector"]
+    assert embedder.calls == 1
+
+
+# --- Bounded memory and request limits ------------------------------------------------------------
+
+
+def test_text_embedder_cache_is_bounded() -> None:
+    embedder = CountingEmbedder()
+    embedder._max_cached = 2
+    for text in ("a", "b", "a", "c"):  # "a" is used again, so "b" is the one evicted
+        embedder.embed_text(text)
+    assert list(embedder._cache) == [hashlib.sha1(t.encode()).hexdigest() for t in ("a", "c")]
+
+
+def test_profile_cache_is_bounded(monkeypatch: pytest.MonkeyPatch) -> None:
+    from src.matching import service as matching_service
+
+    monkeypatch.setattr(matching_service, "MAX_CACHED_PROFILES", 2)
+    service = MatchingService(TextEmbedder(None), RankingWeights())
+    for profile_id in ("u1", "u2", "u1", "u3"):
+        service._get_profile_bundle(PROFILE, profile_id=profile_id)
+    assert list(service._profile_cache) == ["u1", "u3"]
+
+
+def test_vector_store_retries_a_failed_load_and_keeps_newer_vectors(monkeypatch: pytest.MonkeyPatch) -> None:
+    from array import array
+
+    from src.matching import vector_store
+    from src.matching.vector_store import ProfileVectorStore
+
+    collection = FakeCollection()
+    ProfileVectorStore(collection, "hash-96").save("stored", "sig", [0.5, 0.25])
+
+    class FlakyCollection(FakeCollection):
+        down = True
+
+        def find(self, query: dict, projection: dict) -> list[dict]:
+            if self.down:
+                raise ConnectionError("database unreachable")
+            return super().find(query, projection)
+
+    flaky = FlakyCollection()
+    flaky.docs = collection.docs
+    store = ProfileVectorStore(flaky, "hash-96")
+    store.preload()  # fails: the database is down at startup
+    store.save("new", "sig", [1.0, 0.0])
+    flaky.down = False
+    assert store.get("stored", "sig") is None  # not retried before the retry interval
+
+    monkeypatch.setattr(vector_store.time, "monotonic", lambda: 10**9)
+    assert store.get("stored", "sig") == [0.5, 0.25]  # loaded on the next attempt
+    assert store.get("new", "sig") == [1.0, 0.0]  # and the vector saved meanwhile survives
+    assert isinstance(store._vectors["stored"][1], array)  # float32, not a list of Python floats
+
+
+@pytest.mark.parametrize(
+    ("path", "body"),
+    [
+        ("/api/match/match", {"userProfile": {}, "candidates": [], "topK": -1}),
+        ("/api/match/match", {"userProfile": {}, "candidates": [{}] * 5001}),
+        ("/api/match/search", {"query": "q" * 501, "candidates": []}),
+        ("/api/match/search", {"query": "q", "candidates": [], "minScore": 2}),
+        ("/api/match/precompute", {"profileId": "", "profile": {}}),
+    ],
+)
+def test_routes_reject_out_of_range_input(path: str, body: dict[str, Any]) -> None:
+    fake = FakeMatchingService()
+    assert _client(fake).post(path, json=body).status_code == 422
+    assert fake.calls == []

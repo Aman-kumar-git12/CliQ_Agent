@@ -4,6 +4,7 @@ import json
 import logging
 from typing import Any
 
+import groq
 from langchain_core.output_parsers import StrOutputParser
 from langchain_core.runnables import Runnable
 
@@ -15,6 +16,10 @@ from .schemas import ExpertiseGenerateResponse, ExpertisePayload
 logger = logging.getLogger(__name__)
 
 REFINE_MODE = "refine_existing"
+# The Groq SDK's own retries are off (see core/config.py), so a 5xx gets one more try here before the
+# user is handed the deterministic draft; rate limits and timeouts go straight to the draft.
+RETRY_ERRORS = (groq.InternalServerError,)
+LLM_ATTEMPTS = 2
 
 
 def parse_json_object(response: str) -> Any:
@@ -36,7 +41,9 @@ class ExpertiseService:
     """Builds Magic Builder profiles. The LLM is injected so tests can pass a fake."""
 
     def __init__(self, llm: Runnable) -> None:
-        self._chain = GENERATION_PROMPT | llm | StrOutputParser()
+        self._chain = (GENERATION_PROMPT | llm | StrOutputParser()).with_retry(
+            retry_if_exception_type=RETRY_ERRORS, stop_after_attempt=LLM_ATTEMPTS
+        )
 
     async def generate_expertise(
         self,

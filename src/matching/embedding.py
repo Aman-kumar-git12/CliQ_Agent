@@ -4,10 +4,11 @@ import hashlib
 import logging
 import math
 import re
+from collections import OrderedDict
 from threading import Lock
 from typing import Any
 
-from ..core.embeddings import get_embeddings
+from ..core.embeddings import EMBEDDING_MODEL, MODEL_CACHE_DIR, get_embeddings
 from .tokens import tokenize
 
 logger = logging.getLogger(__name__)
@@ -15,6 +16,9 @@ logger = logging.getLogger(__name__)
 # BGE models retrieve better when a query (not a document) carries this instruction prefix
 BGE_QUERY_INSTRUCTION = "Represent this sentence for searching relevant passages: "
 HASH_EMBEDDING_DIMENSIONS = 96
+# Profile vectors are also kept by MatchingService and the vector store; this cache only has to cover the
+# texts of one busy period (queries, ad-hoc user profiles). A 384-float list is about 12 KB in Python.
+TEXT_CACHE_SIZE = 1024
 
 
 def load_embedding_backend() -> Any | None:
@@ -35,7 +39,7 @@ def load_embedding_backend() -> Any | None:
         # Imported here: it pulls in onnxruntime, which is only worth loading on this fallback path
         from fastembed import TextEmbedding
 
-        embedder = TextEmbedding()
+        embedder = TextEmbedding(EMBEDDING_MODEL, cache_dir=str(MODEL_CACHE_DIR))
         logger.info("Matching uses fastembed TextEmbedding")
         return embedder
     # Deliberately broad: same reason; the hash embedding below always works
@@ -75,15 +79,16 @@ def cosine_similarity(left: list[float], right: list[float]) -> float:
 
 
 class TextEmbedder:
-    """Embeds profile text and queries with a cache keyed by the text's hash.
+    """Embeds profile text and queries with a bounded (least recently used) cache keyed by the text's hash.
 
     `backend` is a LangChain embeddings object (embed_documents), a fastembed TextEmbedding (embed),
     or None to use the hash embedding.
     """
 
-    def __init__(self, backend: Any | None) -> None:
+    def __init__(self, backend: Any | None, max_cached: int = TEXT_CACHE_SIZE) -> None:
         self._backend = backend
-        self._cache: dict[str, list[float]] = {}
+        self._max_cached = max_cached
+        self._cache: OrderedDict[str, list[float]] = OrderedDict()
         self._cache_lock = Lock()
 
     @property
@@ -96,8 +101,9 @@ class TextEmbedder:
         cache_key = hashlib.sha1(text.encode("utf-8")).hexdigest()
         with self._cache_lock:
             cached_vector = self._cache.get(cache_key)
-        if cached_vector is not None:
-            return cached_vector
+            if cached_vector is not None:
+                self._cache.move_to_end(cache_key)
+                return cached_vector
 
         if hasattr(self._backend, "embed_documents"):
             vector = self._backend.embed_documents([text])[0]
@@ -108,6 +114,8 @@ class TextEmbedder:
 
         with self._cache_lock:
             self._cache[cache_key] = vector
+            if len(self._cache) > self._max_cached:
+                self._cache.popitem(last=False)
         return vector
 
     def embed_query(self, query: str) -> list[float]:

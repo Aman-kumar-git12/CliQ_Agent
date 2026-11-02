@@ -1,5 +1,6 @@
 """MessageAssistantService: reply suggestions and Ask AI answers for a 1:1 chat."""
 
+import asyncio
 import logging
 from collections.abc import AsyncIterator
 from typing import Any
@@ -23,6 +24,7 @@ from .routing import (
     is_transcript_or_summary_prompt,
     normalized_user_text,
 )
+from .safety import contains_unsafe_messaging_request
 from .suggestions import normalize_reply_payload
 from .tone import DEFAULT_TONE, get_emoji_instruction, get_tone_instruction, normalize_tone
 
@@ -43,7 +45,11 @@ class MessageAssistantService:
             NamedModel("fallback_response_llm", fallback_llm),
             NamedModel("classifier_llm", classifier_llm),
         )
-        self._classifier = ModeClassifier(self._models)
+        # Safety and routing answer with a few JSON tokens: the small, fast model first, never the large
+        # response model. When every classifier fails, routing uses its heuristic and safety fails open.
+        self._classifier = ModeClassifier(
+            (NamedModel("classifier_llm", classifier_llm), NamedModel("fallback_response_llm", fallback_llm))
+        )
 
     def generate_response(
         self,
@@ -57,12 +63,18 @@ class MessageAssistantService:
     ) -> dict[str, Any]:
         """Reply suggestions grounded in the conversation, or opener suggestions when the chat is too sparse."""
         tone = normalize_tone(tone)
-        if self._classifier.should_block(draft):
+        if contains_unsafe_messaging_request(draft):
+            return canned_responses.safety_reply_payload(tone)
+        routed = self._classifier.classify_unless_blocked(
+            draft, lambda: self._classifier.classify_reply_mode(conversation, draft, older_context)
+        )
+        if routed is None:
             return canned_responses.safety_reply_payload(tone)
 
-        reply_mode, routing_source = self._classifier.classify_reply_mode(conversation, draft, older_context)
+        reply_mode, routing_source = routed
         if reply_mode == "general":
-            return self.generate_general_replies(draft, tone, max_suggestions, emoji_preference)
+            # The draft was already checked above, so the opener path does not ask the safety model again
+            return self._general_replies(draft, tone, max_suggestions, emoji_preference)
 
         system_prompt, user_prompt = build_contextual_reply_prompts(
             conversation, draft, other_name, older_context, tone, max_suggestions, emoji_preference
@@ -89,7 +101,11 @@ class MessageAssistantService:
         tone = normalize_tone(tone)
         if self._classifier.should_block(draft):
             return canned_responses.safety_reply_payload(tone)
+        return self._general_replies(draft, tone, max_suggestions, emoji_preference)
 
+    def _general_replies(
+        self, draft: str, tone: str, max_suggestions: int, emoji_preference: str | None
+    ) -> dict[str, Any]:
         user_prompt = prompts.general_reply_user_prompt(
             draft, tone, get_tone_instruction(tone), get_emoji_instruction(emoji_preference), max_suggestions
         )
@@ -148,15 +164,11 @@ class MessageAssistantService:
     ) -> dict[str, Any]:
         """Ask AI answer about the conversation, routed to general advice when the question is not chat-specific."""
         tone = normalize_tone(tone)
-        rule_answer = self._rule_based_answer(question, tone)
-        if rule_answer is not None:
-            return rule_answer
-        if is_transcript_or_summary_prompt(question):
-            return canned_responses.conversation_transcript_payload(conversation, older_context, tone)
-
-        question_mode, routing_source = self._classifier.classify_question_mode(question)
+        canned, question_mode, routing_source = self._route_question(conversation, question, older_context, tone)
+        if canned is not None:
+            return canned
         if question_mode != "contextual":
-            return self.answer_general_help(question, tone)
+            return self._general_help_answer(question, tone)
 
         conversation_text, older_text = build_context_sections(conversation, older_context)
         user_prompt = prompts.conversation_answer_user_prompt(
@@ -198,6 +210,10 @@ class MessageAssistantService:
         rule_answer = self._rule_based_answer(question, tone)
         if rule_answer is not None:
             return rule_answer
+        return self._general_help_answer(question, tone)
+
+    def _general_help_answer(self, question: str, tone: str) -> dict[str, Any]:
+        """General help for a question that has already passed the safety checks."""
         if not normalized_user_text(question):
             return canned_responses.fallback_general_clarifier(tone)
 
@@ -232,18 +248,19 @@ class MessageAssistantService:
         older_context: str = "",
         tone: str = DEFAULT_TONE,
     ) -> AsyncIterator[str]:
-        """Streaming plain-text version of answer_about_conversation."""
-        tone = normalize_tone(tone)
-        rule_answer = self._rule_based_answer(question, tone)
-        if rule_answer is None and is_transcript_or_summary_prompt(question):
-            rule_answer = canned_responses.conversation_transcript_payload(conversation, older_context, tone)
-        if rule_answer is not None:
-            yield rule_answer["answer"]
-            return
+        """Streaming plain-text version of answer_about_conversation.
 
-        question_mode, _ = self._classifier.classify_question_mode(question)
+        The safety and routing classifiers are blocking LLM calls, so they run in a worker thread.
+        """
+        tone = normalize_tone(tone)
+        canned, question_mode, _ = await asyncio.to_thread(
+            self._route_question, conversation, question, older_context, tone
+        )
+        if canned is not None:
+            yield canned["answer"]
+            return
         if question_mode != "contextual":
-            async for chunk in self.stream_general_help(question, tone):
+            async for chunk in self._stream_general_help_answer(question, tone):
                 yield chunk
             return
 
@@ -265,11 +282,17 @@ class MessageAssistantService:
     async def stream_general_help(self, question: str = "", tone: str = DEFAULT_TONE) -> AsyncIterator[str]:
         """Streaming plain-text version of answer_general_help."""
         tone = normalize_tone(tone)
-        rule_answer = self._rule_based_answer(question, tone)
-        if rule_answer is None and not normalized_user_text(question):
-            rule_answer = canned_responses.fallback_general_clarifier(tone)
+        rule_answer = await asyncio.to_thread(self._rule_based_answer, question, tone)
         if rule_answer is not None:
             yield rule_answer["answer"]
+            return
+        async for chunk in self._stream_general_help_answer(question, tone):
+            yield chunk
+
+    async def _stream_general_help_answer(self, question: str, tone: str) -> AsyncIterator[str]:
+        """Streamed general help for a question that has already passed the safety checks."""
+        if not normalized_user_text(question):
+            yield canned_responses.fallback_general_clarifier(tone)["answer"]
             return
 
         user_prompt = prompts.stream_general_help_user_prompt(question, tone)
@@ -278,6 +301,34 @@ class MessageAssistantService:
             self._models, prompts.STREAM_GENERAL_HELP_SYSTEM_PROMPT, user_prompt, fallback
         ):
             yield chunk
+
+    def _route_question(
+        self, conversation: list[Turn] | None, question: str, older_context: str, tone: str
+    ) -> tuple[dict[str, Any] | None, str, str]:
+        """(canned answer, question mode, routing source) for an Ask AI question.
+
+        A canned answer needs no generation: a safety refusal, a greeting, a capability blurb or the transcript.
+        A bare greeting can't be unsafe, so it skips the safety model; everything else is checked by it while
+        the question-mode classifier runs alongside.
+        """
+        if contains_unsafe_messaging_request(question):
+            return canned_responses.safety_answer_payload(tone), "", ""
+        if is_greeting_prompt(question):
+            return canned_responses.greeting_answer_payload(tone), "", ""
+
+        if is_capability_prompt(question) or is_transcript_or_summary_prompt(question):
+            if self._classifier.should_block(question):
+                return canned_responses.safety_answer_payload(tone), "", ""
+            if is_capability_prompt(question):
+                return canned_responses.capability_answer_payload(tone), "", ""
+            return canned_responses.conversation_transcript_payload(conversation, older_context, tone), "", ""
+
+        routed = self._classifier.classify_unless_blocked(
+            question, lambda: self._classifier.classify_question_mode(question)
+        )
+        if routed is None:
+            return canned_responses.safety_answer_payload(tone), "", ""
+        return None, *routed
 
     def _rule_based_answer(self, question: str, tone: str) -> dict[str, Any] | None:
         """Answers that need no generation: safety refusals, greetings and capability questions."""

@@ -14,6 +14,7 @@ from dataclasses import dataclass, field
 
 from langchain_core.documents import Document
 from langchain_core.messages import BaseMessage
+from pymongo.errors import PyMongoError
 
 from .answering import AnswerWriter
 from .errors import LimitBreaker, classify_error, resolve_language, user_message
@@ -161,10 +162,22 @@ class ChatPipeline:
             yield event
 
     def _load_history(self, turn: Turn) -> list[BaseMessage]:
-        if turn.regenerate:
-            # Regenerate must not see its own previous answer
-            self.history.drop_last_exchange(turn.session_id)
-        return self.history.messages(turn.session_id)
+        try:
+            if turn.regenerate:
+                # Regenerate must not see its own previous answer
+                self.history.drop_last_exchange(turn.session_id)
+            return self.history.messages(turn.session_id)
+        except PyMongoError as exc:
+            # The question can still be answered, just without the earlier turns
+            logger.warning("Chat history unavailable, answering without it: %s", exc)
+            return []
+
+    async def _save_exchange(self, turn: Turn) -> None:
+        """The answer has already been streamed; a database outage must not replace it with an error."""
+        try:
+            await asyncio.to_thread(self.history.append_exchange, turn.session_id, turn.message, turn.answer)
+        except PyMongoError as exc:
+            logger.warning("Could not save the chat turn to history: %s", exc)
 
     async def _lookup_feedback(self, turn: Turn, depends_on_context: bool) -> FeedbackLookup:
         """Feedback only applies to standalone, non-personal questions (same rule as the shared cache)."""
@@ -188,7 +201,7 @@ class ChatPipeline:
         sources = approved.get("sources") or []
         for token in re.findall(r"\S+\s*|\s+", turn.answer):
             yield "token", {"text": token}
-        await asyncio.to_thread(self.history.append_exchange, turn.session_id, turn.message, turn.answer)
+        await self._save_exchange(turn)
         yield "suggestions", {"items": self.suggester.suggest(turn.message, [source_docs(sources)])}
         turn.cacheable = True
         yield (
@@ -214,7 +227,7 @@ class ChatPipeline:
         return extra_system
 
     async def _finish(self, turn: Turn, page_relative: bool) -> AsyncIterator[Event]:
-        await asyncio.to_thread(self.history.append_exchange, turn.session_id, turn.message, turn.answer)
+        await self._save_exchange(turn)
 
         question = turn.parts[0].question if len(turn.parts) == 1 else turn.message
         yield "suggestions", {"items": self.suggester.suggest(question, turn.docs_by_part)}
@@ -243,9 +256,9 @@ class ChatPipeline:
 
     def _failure_events(self, turn: Turn, exc: Exception) -> list[Event]:
         turn.error = error_code(exc)
-        if turn.error.startswith("llm_") or turn.error == "rate_limited":
-            # Provider errors are expected (quota, timeouts); one line is enough
-            logger.warning("Help chat LLM error (%s): %s", turn.error, str(exc)[:300])
+        if turn.error.startswith("llm_") or turn.error in ("rate_limited", "db_unavailable"):
+            # Provider and database outages are expected (quota, timeouts); one line is enough
+            logger.warning("Help chat dependency error (%s): %s", turn.error, str(exc)[:300])
         else:
             logger.exception("Help chat turn failed")
         info = classify_error(exc)

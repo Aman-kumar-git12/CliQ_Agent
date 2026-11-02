@@ -3,6 +3,8 @@
 import json
 from typing import Any
 
+import groq
+import httpx
 import pytest
 from fastapi import FastAPI
 from fastapi.testclient import TestClient
@@ -21,6 +23,7 @@ from src.expertise.facts import (
 )
 from src.expertise.normalization import canonicalize_skill, normalize_generated_skills, split_terms
 from src.expertise.router import router
+from src.expertise.schemas import ExpertiseGenerateRequest
 from src.expertise.service import ExpertiseService, parse_json_object
 
 USER = {"firstname": "Asha", "lastname": "Rao", "email": "asha@example.com", "imageUrl": ""}
@@ -211,3 +214,24 @@ def test_route_rejects_unknown_fields() -> None:
 def test_percentages_followed_by_words_are_protected() -> None:
     text = "Drove 35% growth, cut costs by 12.5% and kept 99.9% uptime."
     assert extract_percentages(text) == ["35% growth", "12.5%", "99.9% uptime"]
+
+
+async def test_service_retries_a_provider_5xx_once() -> None:
+    calls: list[int] = []
+
+    def respond(_prompt: Any) -> str:
+        calls.append(1)
+        if len(calls) == 1:
+            request = httpx.Request("POST", "https://api.groq.com")
+            raise groq.InternalServerError("down", response=httpx.Response(503, request=request), body=None)
+        return json.dumps({"description": "UI Engineer", "skills": ["css"]})
+
+    service = ExpertiseService(RunnableLambda(respond))
+    result = await service.generate_expertise({"firstname": "A", "email": "a@x.io"}, {"about": "I build UIs"}, {})
+    assert result["generation_source"] == "llm"
+    assert len(calls) == 2
+
+
+def test_long_answers_are_shortened_not_rejected() -> None:
+    request = ExpertiseGenerateRequest.model_validate({**REQUEST, "answers": {"about": "x" * 10_000}})
+    assert len(request.answers.about) == 4000
