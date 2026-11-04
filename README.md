@@ -21,6 +21,7 @@
 
 <br/>
 
+[🌐 Live Demo](https://cliq-web-rho.vercel.app/) &nbsp;•&nbsp;
 [🎨 Frontend](https://github.com/Aman-kumar-git12/CliQ_Web) &nbsp;•&nbsp;
 [⚙️ Backend](https://github.com/Aman-kumar-git12/CliQ_Backend) &nbsp;•&nbsp;
 [🤖 AI Agent](https://github.com/Aman-kumar-git12/CliQ_Agent)
@@ -310,5 +311,6 @@ once at startup and injected with `Depends(...)`, so tests can swap in fakes.
 
 ## 🔗 Related Repositories
 
+- 🌐 Live website: https://cliq-web-rho.vercel.app/
 - 🎨 Frontend: https://github.com/Aman-kumar-git12/CliQ_Web
 - ⚙️ Backend: https://github.com/Aman-kumar-git12/CliQ_Backend
